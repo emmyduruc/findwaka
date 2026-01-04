@@ -1,93 +1,141 @@
 import { useState } from 'react';
-import { View, ScrollView, Alert } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import * as Location from 'expo-location';
+import { router, useLocalSearchParams } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useAppStore } from '@/stores/useAppStore';
 import { Button } from '@/ui/Button';
 import { Text } from '@/ui/Text';
-import { Card } from '@/ui/Card';
-import { Icon } from '@/ui/Icon';
+import { Input } from '@/ui/Input';
 import { BackButton } from '@/ui/BackButton';
+import { Icon } from '@/ui/Icon';
 import { colors } from '@/theme/colors';
+import { requiredStringSchema } from '@/utils/validation';
 
 /**
- * Driver onboarding step 3: Location permission
+ * Driver onboarding step 3: Areas of operation
  * 
- * Requests location permission and completes driver onboarding.
+ * Collects main areas where the driver operates.
+ * At least 1 area is required.
+ * Plus button on 3rd input to add more inputs.
  */
 const DriverOnboardingStep3 = observer(() => {
   const store = useAppStore();
-  const [locationGranted, setLocationGranted] = useState(false);
+  const params = useLocalSearchParams<{ vehicleType?: string }>();
 
-  const handleAllowLocation = async () => {
+  const [areas, setAreas] = useState<string[]>(['', '', '']);
+  const [areaValidations, setAreaValidations] = useState<boolean[]>([false, false, false]);
+
+  const handleAreaChange = (index: number, value: string) => {
+    const newAreas = [...areas];
+    newAreas[index] = value;
+    setAreas(newAreas);
+
+    // Validate this area
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        setLocationGranted(true);
-      } else {
-        Alert.alert('Permission Denied', 'Location permission is required to show nearby drivers.');
-      }
-    } catch (error) {
-      console.error('Location permission error:', error);
-      Alert.alert('Error', 'Failed to request location permission.');
+      requiredStringSchema.parse(value);
+      const newValidations = [...areaValidations];
+      newValidations[index] = true;
+      setAreaValidations(newValidations);
+    } catch {
+      const newValidations = [...areaValidations];
+      newValidations[index] = false;
+      setAreaValidations(newValidations);
     }
   };
 
-  const handleFinishSetup = async () => {
-    await store.setDriverOnboardingComplete(true);
-    router.replace('/(tabs)/drivers');
+  const handleAddArea = () => {
+    setAreas([...areas, '']);
+    setAreaValidations([...areaValidations, false]);
   };
+
+  const handleContinue = async () => {
+    // Validate at least one area is entered
+    const validAreas = areas.filter((area, index) => area.trim() && areaValidations[index]);
+    
+    if (validAreas.length === 0) {
+      return;
+    }
+
+    // TODO: Save areas to store/database
+    
+    // Complete driver onboarding
+    await store.setDriverOnboardingComplete(true);
+    
+    // Route to home (nearby tab)
+    router.replace('/(tabs)/nearby');
+  };
+
+  const hasAtLeastOneValidArea = areas.some((area, index) => area.trim() && areaValidations[index]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, padding: 20 }}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        {/* Back Button */}
-        <BackButton />
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, padding: 20 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <BackButton />
 
-        <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 40 }}>
-          {/* Title */}
-          <Text variant="h2" weight="600" style={{ marginBottom: 48 }}>
-            Location
-          </Text>
+          <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 40 }}>
+            <Text variant="h2" weight="600" style={{ marginBottom: 16 }}>
+              Main area you operate
+            </Text>
+            <Text
+              variant="body"
+              weight="400"
+              style={{ marginBottom: 48, color: colors.textMuted }}
+            >
+              Enter at least one area where you provide rides
+            </Text>
 
-          {/* Info Card */}
-          <Card style={{ marginBottom: 32 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}>
-              <Icon name="location-outline" size={24} color={colors.accentPrimary} />
-              <View style={{ flex: 1 }}>
-                <Text variant="body" weight="400" style={{ lineHeight: 24 }}>
-                  To appear in Nearby drivers, we need your location while online.
-                </Text>
-              </View>
+            {/* Area Inputs */}
+            <View style={{ gap: 16, marginBottom: 32 }}>
+              {areas.map((area, index) => (
+                <View key={index} className={`relative ${index >= 2 && index === areas.length - 1 ? 'flex-row gap-4 items-center' : ''}`}>
+                  <View className={`${index >= 2 && index === areas.length - 1 ? 'w-[98%]' : ''}`} style={{ paddingRight: index >= 2 && index === areas.length - 1 ? 56 : 0 }}>
+                    <Input
+                      label={index === 0 ? 'Area 1' : index === 1 ? 'Area 2' : `Area ${index + 1}`}
+                      placeholder="e.g., Victoria Island, Lekki"
+                      value={area}
+                      onChangeText={(value) => handleAreaChange(index, value)}
+                      schema={requiredStringSchema}
+                      onValidationChange={(isValid) => {
+                        const newValidations = [...areaValidations];
+                        newValidations[index] = isValid;
+                        setAreaValidations(newValidations);
+                      }}
+                    />
+                  </View>
+                  {index >= 2 && index === areas.length - 1 && (
+                    <View className="absolute right-0 items-center w-[15%]">
+                    <TouchableOpacity
+                      onPress={handleAddArea}
+                      className=" bg-accentPrimary/20 rounded-full p-4 items-center w-full"
+                      activeOpacity={0.7}
+                    >
+                      <Icon name="add" size={24} color={colors.accentPrimary} />
+                    </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))}
             </View>
-          </Card>
 
-          {/* Buttons */}
-          <View style={{ gap: 16 }}>
-            {!locationGranted && (
-              <Button
-                label="Allow location"
-                onPress={handleAllowLocation}
-                variant="primary"
-                size="lg"
-                fullWidth
-              />
-            )}
             <Button
-              label="Finish setup"
-              onPress={handleFinishSetup}
-              variant={locationGranted ? 'primary' : 'outline'}
+              label="Continue"
+              onPress={handleContinue}
+              variant="primary"
               size="lg"
               fullWidth
+              disabled={!hasAtLeastOneValidArea}
             />
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 });

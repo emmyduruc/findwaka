@@ -10,4 +10,8 @@ export { Divider } from './Divider';
 export { ListRow } from './ListRow';
 export { Chip } from './Chip';
 export { Toggle } from './Toggle';
+export { ImagePickerModal } from './ImagePickerModal';
+export { BottomSheet } from './BottomSheet';
+export { DriverDetailSheet } from './DriverDetailSheet';
+export type { DriverDetail } from './DriverDetailSheet';
 

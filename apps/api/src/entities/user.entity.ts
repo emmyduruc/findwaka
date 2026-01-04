@@ -38,6 +38,9 @@ export class User {
   @Column({ name: 'photo_url', type: 'varchar', nullable: true })
   photoUrl: string | null;
 
+  @Column({ name: 'push_notification_token', type: 'varchar', nullable: true })
+  pushNotificationToken: string | null;
+
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 

@@ -72,6 +72,8 @@ export const createGuiStore = (
         showPaystackWebview: false,
         isChatBotVisible: false,
         remoteConfig: null as null,
+        showImagePickerModal: false,
+        selectedImageUri: null as string | null,
 
         //    _____                            _           _
         //   / ____|                          | |         | |
@@ -196,6 +198,18 @@ export const createGuiStore = (
         setRemoteConfig: (config:null) => {
             runInAction(() => {
                 store.remoteConfig = config;
+            });
+        },
+
+        setShowImagePickerModal: (visible: boolean) => {
+            runInAction(() => {
+                store.showImagePickerModal = visible;
+            });
+        },
+
+        setSelectedImageUri: (uri: string | null) => {
+            runInAction(() => {
+                store.selectedImageUri = uri;
             });
         },
 

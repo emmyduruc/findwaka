@@ -66,6 +66,18 @@ export class DriverProfile {
   @Column({ name: 'rating_count', type: 'int', default: 0 })
   ratingCount: number;
 
+  @Column({ name: 'areas_of_operation', type: 'jsonb', nullable: true })
+  areasOfOperation: string[] | null;
+
+  @Column({ name: 'hours_online', type: 'numeric', precision: 10, scale: 2, default: 0 })
+  hoursOnline: number;
+
+  @Column({ name: 'profile_visits', type: 'int', default: 0 })
+  profileVisits: number;
+
+  @Column({ name: 'total_rides', type: 'int', default: 0 })
+  totalRides: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

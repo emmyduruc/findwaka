@@ -8,6 +8,8 @@ import { DriverLocationHistory } from '../entities/driver-location-history.entit
 import { Community } from '../entities/community.entity';
 import { Review } from '../entities/review.entity';
 import { AuditEvent } from '../entities/audit-event.entity';
+import { Conversation } from '../entities/conversation.entity';
+import { Message } from '../entities/message.entity';
 
 export const typeOrmConfig: TypeOrmModuleOptions = {
   type: 'postgres',
@@ -22,6 +24,8 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
     Community,
     Review,
     AuditEvent,
+    Conversation,
+    Message,
   ],
   migrations: ['apps/api/src/migrations/*.ts'],
   synchronize: false,

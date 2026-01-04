@@ -11,6 +11,7 @@ import { PresenceModule } from './modules/presence/presence.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
+import { PushNotificationsModule } from './modules/push-notifications/push-notifications.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
     DocumentsModule,
     AdminModule,
     ReviewsModule,
+    PushNotificationsModule,
   ],
 })
 export class AppModule {

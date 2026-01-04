@@ -29,7 +29,21 @@ export default function DriverOnboardingStep1() {
       return;
     }
     // TODO: Save to store/database
-    router.push('/(driver-onboarding)/step-2');
+    
+    // Route based on vehicle type
+    if (vehicleType === 'bike') {
+      // Bike goes directly to areas of operation
+      router.push({
+        pathname: '/(driver-onboarding)/step-3',
+        params: { vehicleType: 'bike' },
+      });
+    } else {
+      // Keke and Car go to vehicle details first
+      router.push({
+        pathname: '/(driver-onboarding)/step-2',
+        params: { vehicleType },
+      });
+    }
   };
 
   return (
