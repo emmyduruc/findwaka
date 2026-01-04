@@ -57,7 +57,7 @@ const WelcomeScreen = observer(() => {
               weight="400"
               style={{ marginBottom: 48, textAlign: 'center', paddingHorizontal: 20 }}
             >
-              Bikes, keke, and cars near you
+              Okada, Keke, and cars near you
             </Text>
 
             {/* Buttons */}

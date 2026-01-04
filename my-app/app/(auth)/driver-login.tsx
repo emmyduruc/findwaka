@@ -9,6 +9,7 @@ import { Text } from '@/ui/Text';
 import { Input } from '@/ui/Input';
 import { Icon } from '@/ui/Icon';
 import { colors } from '@/theme/colors';
+import { phoneSchema } from '@/utils/validation';
 
 /**
  * Driver login screen
@@ -22,8 +23,10 @@ import { colors } from '@/theme/colors';
 const DriverLoginScreen = observer(() => {
   const store = useAppStore();
   const [phone, setPhone] = useState('');
+  const [isPhoneValid, setIsPhoneValid] = useState(true);
 
   const handleMockLogin = async () => {
+    if (!isPhoneValid) return;
     await store.mockDriverLogin();
     router.replace('/(driver-onboarding)/step-1');
   };
@@ -52,6 +55,8 @@ const DriverLoginScreen = observer(() => {
               onChangeText={setPhone}
               keyboardType="phone-pad"
               autoComplete="tel"
+              schema={phoneSchema}
+              onValidationChange={(isValid) => setIsPhoneValid(isValid)}
               leftIcon={<Icon name="call-outline" size={20} color={colors.textMuted} />}
               containerClassName="mb-6"
             />
@@ -64,6 +69,7 @@ const DriverLoginScreen = observer(() => {
                 variant="primary"
                 size="lg"
                 fullWidth
+                disabled={!isPhoneValid || !phone.trim()}
               />
             </View>
           </View>

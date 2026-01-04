@@ -9,6 +9,7 @@ import { Text } from '@/ui/Text';
 import { Input } from '@/ui/Input';
 import { Icon } from '@/ui/Icon';
 import { colors } from '@/theme/colors';
+import { phoneSchema } from '@/utils/validation';
 
 /**
  * Passenger login screen
@@ -22,8 +23,10 @@ import { colors } from '@/theme/colors';
 const PassengerLoginScreen = observer(() => {
   const store = useAppStore();
   const [phone, setPhone] = useState('');
+  const [isPhoneValid, setIsPhoneValid] = useState(true);
 
   const handleSendCode = () => {
+    if (!isPhoneValid) return;
     // TODO: Implement Firebase OTP send code
     // For now, just proceed to mock login
     handleMockLogin();
@@ -58,6 +61,8 @@ const PassengerLoginScreen = observer(() => {
               onChangeText={setPhone}
               keyboardType="phone-pad"
               autoComplete="tel"
+              schema={phoneSchema}
+              onValidationChange={(isValid) => setIsPhoneValid(isValid)}
               leftIcon={<Icon name="call-outline" size={20} color={colors.textMuted} />}
               containerClassName="mb-6"
             />
@@ -70,6 +75,7 @@ const PassengerLoginScreen = observer(() => {
                 variant="primary"
                 size="lg"
                 fullWidth
+                disabled={!isPhoneValid || !phone.trim()}
               />
               <Button
                 label="Mock login"

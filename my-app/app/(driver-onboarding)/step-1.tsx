@@ -7,6 +7,7 @@ import { Text } from '@/ui/Text';
 import { Input } from '@/ui/Input';
 import { Chip } from '@/ui/Chip';
 import { colors } from '@/theme/colors';
+import { nameSchema } from '@/utils/validation';
 
 export type VehicleType = 'bike' | 'tricycle' | 'car';
 
@@ -20,9 +21,10 @@ export type VehicleType = 'bike' | 'tricycle' | 'car';
 export default function DriverOnboardingStep1() {
   const [displayName, setDisplayName] = useState('');
   const [vehicleType, setVehicleType] = useState<VehicleType | null>(null);
+  const [isNameValid, setIsNameValid] = useState(true);
 
   const handleContinue = () => {
-    if (!displayName.trim() || !vehicleType) {
+    if (!isNameValid || !displayName.trim() || !vehicleType) {
       return;
     }
     // TODO: Save to store/database
@@ -52,6 +54,8 @@ export default function DriverOnboardingStep1() {
               value={displayName}
               onChangeText={setDisplayName}
               autoComplete="name"
+              schema={nameSchema}
+              onValidationChange={(isValid) => setIsNameValid(isValid)}
               containerClassName="mb-8"
             />
 
@@ -90,7 +94,7 @@ export default function DriverOnboardingStep1() {
               variant="primary"
               size="lg"
               fullWidth
-              disabled={!displayName.trim() || !vehicleType}
+              disabled={!isNameValid || !displayName.trim() || !vehicleType}
             />
           </View>
         </ScrollView>
