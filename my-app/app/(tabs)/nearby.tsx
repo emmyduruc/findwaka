@@ -116,8 +116,15 @@ const NearbyScreen = observer(() => {
   };
 
   const handleChat = () => {
-    // TODO: Navigate to chat screen
-    console.log('Navigate to chat with', selectedDriver?.name);
+    if (selectedDriver) {
+      router.push({
+        pathname: '/chat/[id]',
+        params: {
+          id: selectedDriver.id,
+          name: selectedDriver.name,
+        },
+      });
+    }
   };
 
   const handleCall = (phone: string) => {

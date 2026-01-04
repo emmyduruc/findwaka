@@ -1,9 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddPushNotificationTokenChatAndDriverStats1767568415602
+export class AddPushNotificationTokenChatAndDriverStats1767569500000
   implements MigrationInterface
 {
-  name = 'AddPushNotificationTokenChatAndDriverStats1767568415602';
+  name = 'AddPushNotificationTokenChatAndDriverStats1767569500000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(

@@ -59,6 +59,7 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(driver-onboarding)" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="chat/[id]" />
         </Stack>
         <StatusBar style="light" />
       </ThemeProvider>
