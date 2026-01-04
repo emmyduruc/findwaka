@@ -1,0 +1,15 @@
+node_modules
+dist
+.nx
+coverage
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+
+# App-specific env files (keep .env.example files)
+apps/api/.env
+apps/web/.env
+apps/expo/.env
+

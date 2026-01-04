@@ -1,0 +1,308 @@
+{
+  "graph": {
+    "nodes": {
+      "shared": {
+        "name": "shared",
+        "type": "lib",
+        "data": {
+          "root": "packages/shared",
+          "sourceRoot": "packages/shared/src",
+          "name": "shared",
+          "tags": [
+            "npm:private"
+          ],
+          "metadata": {
+            "targetGroups": {}
+          },
+          "targets": {
+            "build": {
+              "executor": "@nx/js:tsc",
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/packages/shared",
+                "main": "packages/shared/src/index.ts",
+                "tsConfig": "packages/shared/tsconfig.lib.json",
+                "assets": [
+                  "packages/shared/*.md"
+                ]
+              },
+              "configurations": {},
+              "parallelism": true,
+              "cache": true,
+              "inputs": [
+                "production",
+                "^production"
+              ],
+              "dependsOn": [
+                "^build"
+              ]
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "configurations": {},
+              "options": {},
+              "parallelism": true,
+              "cache": true,
+              "inputs": [
+                "default",
+                "{workspaceRoot}/.eslintrc.json"
+              ]
+            }
+          },
+          "$schema": "../../node_modules/nx/schemas/project-schema.json",
+          "projectType": "library",
+          "implicitDependencies": []
+        }
+      },
+      "expo": {
+        "name": "expo",
+        "type": "app",
+        "data": {
+          "root": "apps/expo",
+          "sourceRoot": "apps/expo",
+          "name": "expo",
+          "tags": [
+            "npm:private"
+          ],
+          "metadata": {
+            "targetGroups": {}
+          },
+          "targets": {
+            "build": {
+              "executor": "@nx/react-native:bundle",
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "entryFile": "apps/expo/index.js",
+                "platform": "ios",
+                "outputPath": "dist/apps/expo"
+              },
+              "configurations": {},
+              "parallelism": true,
+              "cache": true,
+              "inputs": [
+                "production",
+                "^production"
+              ],
+              "dependsOn": [
+                "^build"
+              ]
+            },
+            "serve": {
+              "executor": "@nx/react-native:start",
+              "options": {
+                "port": 8081
+              },
+              "configurations": {},
+              "parallelism": true
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "configurations": {},
+              "options": {},
+              "parallelism": true,
+              "cache": true,
+              "inputs": [
+                "default",
+                "{workspaceRoot}/.eslintrc.json"
+              ]
+            }
+          },
+          "$schema": "../../node_modules/nx/schemas/project-schema.json",
+          "projectType": "application",
+          "implicitDependencies": []
+        }
+      },
+      "api": {
+        "name": "api",
+        "type": "app",
+        "data": {
+          "root": "apps/api",
+          "sourceRoot": "apps/api/src",
+          "name": "api",
+          "tags": [
+            "npm:private"
+          ],
+          "metadata": {
+            "targetGroups": {}
+          },
+          "targets": {
+            "build": {
+              "executor": "@nx/node:webpack",
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "options": {
+                "outputPath": "dist/apps/api",
+                "main": "apps/api/src/main.ts",
+                "tsConfig": "apps/api/tsconfig.app.json",
+                "assets": [
+                  "apps/api/src/assets"
+                ]
+              },
+              "configurations": {
+                "production": {
+                  "optimization": true,
+                  "extractLicenses": true,
+                  "inspect": false
+                }
+              },
+              "parallelism": true,
+              "cache": true,
+              "inputs": [
+                "production",
+                "^production"
+              ],
+              "dependsOn": [
+                "^build"
+              ]
+            },
+            "serve": {
+              "executor": "@nx/node:node",
+              "options": {
+                "buildTarget": "api:build"
+              },
+              "configurations": {
+                "production": {
+                  "buildTarget": "api:build:production"
+                }
+              },
+              "parallelism": true
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "configurations": {},
+              "options": {},
+              "parallelism": true,
+              "cache": true,
+              "inputs": [
+                "default",
+                "{workspaceRoot}/.eslintrc.json"
+              ]
+            },
+            "migrate": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "cd apps/api && ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/config/data-source.ts"
+              },
+              "configurations": {},
+              "parallelism": true
+            },
+            "migration:generate": {
+              "executor": "nx:run-commands",
+              "options": {
+                "command": "cd apps/api && ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate src/migrations/Migration"
+              },
+              "configurations": {},
+              "parallelism": true
+            }
+          },
+          "$schema": "../../node_modules/nx/schemas/project-schema.json",
+          "projectType": "application",
+          "implicitDependencies": []
+        }
+      },
+      "web": {
+        "name": "web",
+        "type": "app",
+        "data": {
+          "root": "apps/web",
+          "sourceRoot": "apps/web/src",
+          "name": "web",
+          "tags": [
+            "npm:private"
+          ],
+          "metadata": {
+            "targetGroups": {}
+          },
+          "targets": {
+            "build": {
+              "executor": "@nx/vite:build",
+              "outputs": [
+                "{options.outputPath}"
+              ],
+              "defaultConfiguration": "production",
+              "options": {
+                "outputPath": "dist/apps/web"
+              },
+              "configurations": {
+                "development": {},
+                "production": {
+                  "sourcemap": false
+                }
+              },
+              "parallelism": true,
+              "cache": true,
+              "inputs": [
+                "production",
+                "^production"
+              ],
+              "dependsOn": [
+                "^build"
+              ]
+            },
+            "serve": {
+              "executor": "@nx/vite:dev-server",
+              "defaultConfiguration": "development",
+              "options": {
+                "buildTarget": "web:build",
+                "port": 4200
+              },
+              "configurations": {
+                "development": {
+                  "buildTarget": "web:build:development"
+                },
+                "production": {
+                  "buildTarget": "web:build:production",
+                  "hmr": false
+                }
+              },
+              "parallelism": true
+            },
+            "lint": {
+              "executor": "@nx/eslint:lint",
+              "configurations": {},
+              "options": {},
+              "parallelism": true,
+              "cache": true,
+              "inputs": [
+                "default",
+                "{workspaceRoot}/.eslintrc.json"
+              ]
+            }
+          },
+          "$schema": "../../node_modules/nx/schemas/project-schema.json",
+          "projectType": "application",
+          "implicitDependencies": []
+        }
+      }
+    },
+    "dependencies": {
+      "shared": [],
+      "expo": [
+        {
+          "source": "expo",
+          "target": "shared",
+          "type": "static"
+        }
+      ],
+      "api": [
+        {
+          "source": "api",
+          "target": "shared",
+          "type": "static"
+        }
+      ],
+      "web": [
+        {
+          "source": "web",
+          "target": "shared",
+          "type": "static"
+        }
+      ]
+    }
+  }
+}
