@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Linking, Platform } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { observer } from 'mobx-react-lite';
-import { useAppStore } from '@/stores/useAppStore';
+import { router } from 'expo-router';
 import { Text } from '@/ui/Text';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
@@ -94,8 +93,7 @@ const mockDrivers = [
  * - Driver cards with name, vehicle, distance, last seen
  * - Call and WhatsApp buttons
  */
-const NearbyScreen = observer(() => {
-  const store = useAppStore();
+const NearbyScreen = () => {
   const [vehicleFilter, setVehicleFilter] = useState<VehicleFilter>('all');
   const [selectedDriver, setSelectedDriver] = useState<DriverDetail | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -271,6 +269,6 @@ const NearbyScreen = observer(() => {
       />
     </SafeAreaView>
   );
-});
+};
 
 export default NearbyScreen;
