@@ -95,7 +95,7 @@ export const Input: React.FC<InputProps> = ({
         </Text>
       )}
       <View
-        className={`flex-row items-center gap-3 rounded-xl border px-4 ${hasError ? 'border-error' : isFocused ? 'border-accentPrimary' : 'border-border'}`}
+        className={`flex-row items-center gap-3 rounded-xl border px-4  ${hasError ? 'border-error' : 'border-accentPrimary'}`}
       >
         {leftIcon && (
           <View 

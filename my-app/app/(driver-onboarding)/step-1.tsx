@@ -6,6 +6,7 @@ import { Button } from '@/ui/Button';
 import { Text } from '@/ui/Text';
 import { Input } from '@/ui/Input';
 import { Chip } from '@/ui/Chip';
+import { BackButton } from '@/ui/BackButton';
 import { colors } from '@/theme/colors';
 import { nameSchema } from '@/utils/validation';
 
@@ -41,6 +42,9 @@ export default function DriverOnboardingStep1() {
           contentContainerStyle={{ flexGrow: 1, padding: 20 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* Back Button */}
+          <BackButton />
+
           <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 40 }}>
             {/* Title */}
             <Text variant="h2" weight="600" style={{ marginBottom: 48 }}>

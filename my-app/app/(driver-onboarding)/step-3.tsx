@@ -9,6 +9,7 @@ import { Button } from '@/ui/Button';
 import { Text } from '@/ui/Text';
 import { Card } from '@/ui/Card';
 import { Icon } from '@/ui/Icon';
+import { BackButton } from '@/ui/BackButton';
 import { colors } from '@/theme/colors';
 
 /**
@@ -45,6 +46,9 @@ const DriverOnboardingStep3 = observer(() => {
         contentContainerStyle={{ flexGrow: 1, padding: 20 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Back Button */}
+        <BackButton />
+
         <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 40 }}>
           {/* Title */}
           <Text variant="h2" weight="600" style={{ marginBottom: 48 }}>
