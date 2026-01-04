@@ -1,0 +1,17 @@
+{
+  "name": "@findwaka/shared",
+  "version": "0.0.1",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "tslib": "^2.3.0",
+    "typescript": "~5.9.2"
+  }
+}
