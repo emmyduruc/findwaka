@@ -14,7 +14,7 @@
       "androidCollapsedTitle": "Wakajor"
     },
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0B0F14"
     },
@@ -25,6 +25,14 @@
       "buildNumber": "1",
       "bundleIdentifier": "com.wakajor",
       "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "wakajor",
+              "com.wakajor"
+            ]
+          }
+        ],
         "SKAdNetworkItems": [
           {
             "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
@@ -84,8 +92,6 @@
       "expo-router",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
-      "@react-native-firebase/analytics",
-      "@react-native-firebase/remote-config",
       [
         "expo-image-picker",
         {
@@ -96,7 +102,9 @@
         "expo-build-properties",
         {
           "ios": {
-            "useFrameworks": "static"
+            "useFrameworks": "static",
+            "deploymentTarget": "15.1",
+            "buildReactNativeFromSource": true
           },
           "android": {
             "usesCleartextTraffic": true,
@@ -124,7 +132,7 @@
         "origin": false
       }
     },
-    "owner": "your-expo-username",
+    "owner": "emmyduruc",
     "runtimeVersion": "1.0.0"
   }
 }

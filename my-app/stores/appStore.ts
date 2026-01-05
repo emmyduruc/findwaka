@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import { auth } from '@/config/firebase';
 import { createAuthService } from '@/services/auth';
 import { _setToken } from '@/services/storage';
-import analytics from '@react-native-firebase/analytics';
 
 export type AuthStatus = 'guest' | 'loggedOut' | 'loggedIn';
 export type UserRole = 'passenger' | 'driver';
@@ -223,9 +222,7 @@ export class AppStore {
 
       // Log analytics event
       try {
-        await analytics().logLogin({ method: 'phone' });
-        await analytics().setUserId(user.uid);
-        await analytics().setUserProperty('role', role);
+      
       } catch (analyticsError) {
         console.warn('Analytics logging failed:', analyticsError);
       }
