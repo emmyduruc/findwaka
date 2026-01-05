@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { observer } from 'mobx-react-lite';
+import { useAppStore } from '@/stores/useAppStore';
 import { Text } from '@/ui/Text';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
@@ -93,7 +95,9 @@ const mockDrivers = [
  * - Driver cards with name, vehicle, distance, last seen
  * - Call and WhatsApp buttons
  */
-const NearbyScreen = () => {
+const NearbyScreen = observer(() => {
+  const store = useAppStore();
+  const isGuest = store.authStatus === 'guest';
   const [vehicleFilter, setVehicleFilter] = useState<VehicleFilter>('all');
   const [selectedDriver, setSelectedDriver] = useState<DriverDetail | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -104,6 +108,21 @@ const NearbyScreen = () => {
       : mockDrivers.filter((d) => d.vehicle.toLowerCase() === vehicleFilter);
 
   const handleDriverPress = (driver: typeof mockDrivers[0]) => {
+    // Guest users cannot view driver details - prompt to login
+    if (isGuest) {
+      Alert.alert(
+        'Sign in required',
+        'Please sign in to view driver details and contact drivers.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign in',
+            onPress: () => router.push('/(auth)/passenger-login'),
+          },
+        ]
+      );
+      return;
+    }
     setSelectedDriver(driver as DriverDetail);
     setSheetVisible(true);
   };
@@ -126,10 +145,40 @@ const NearbyScreen = () => {
   };
 
   const handleCall = (phone: string) => {
+    // Guest users cannot call drivers
+    if (isGuest) {
+      Alert.alert(
+        'Sign in required',
+        'Please sign in to call drivers.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign in',
+            onPress: () => router.push('/(auth)/passenger-login'),
+          },
+        ]
+      );
+      return;
+    }
     Linking.openURL(`tel:${phone}`);
   };
 
   const handleWhatsApp = (phone: string) => {
+    // Guest users cannot contact drivers via WhatsApp
+    if (isGuest) {
+      Alert.alert(
+        'Sign in required',
+        'Please sign in to contact drivers.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign in',
+            onPress: () => router.push('/(auth)/passenger-login'),
+          },
+        ]
+      );
+      return;
+    }
     const message = 'Hello, I need a ride.';
     const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     Linking.openURL(url);
@@ -141,12 +190,10 @@ const NearbyScreen = () => {
         contentContainerStyle={{ padding: 20 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <Text variant="h2" weight="600" style={{ marginBottom: 24 }}>
           Nearby drivers
         </Text>
 
-        {/* Filter Chips */}
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
           <Chip
             label="All"
@@ -154,7 +201,7 @@ const NearbyScreen = () => {
             onPress={() => setVehicleFilter('all')}
           />
           <Chip
-            label="Bike"
+            label="Okada"
             selected={vehicleFilter === 'bike'}
             onPress={() => setVehicleFilter('bike')}
           />
@@ -164,7 +211,7 @@ const NearbyScreen = () => {
             onPress={() => setVehicleFilter('tricycle')}
           />
           <Chip
-            label="Car"
+            label="Moto"
             selected={vehicleFilter === 'car'}
             onPress={() => setVehicleFilter('car')}
           />
@@ -266,9 +313,11 @@ const NearbyScreen = () => {
         onClose={handleCloseSheet}
         driver={selectedDriver}
         onChat={handleChat}
+        isGuest={isGuest}
+        onSignInRequired={() => router.push('/(auth)/passenger-login')}
       />
     </SafeAreaView>
   );
-};
+});
 
 export default NearbyScreen;

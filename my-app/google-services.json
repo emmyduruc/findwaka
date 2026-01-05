@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "81572177304",
+    "project_id": "findwaka-90f8b",
+    "storage_bucket": "findwaka-90f8b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:81572177304:android:06c5d1651a2561af76f7ed",
+        "android_client_info": {
+          "package_name": "com.wakajor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDop9g7t71dzLTQKQtRrsORlVVxyLI8czA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

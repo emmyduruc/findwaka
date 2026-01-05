@@ -1,5 +1,5 @@
 {
-  "name": "waka",
+  "name": "wakajor",
   "version": "0.0.1",
   "license": "MIT",
   "engines": {
@@ -15,7 +15,8 @@
     "api:migrate": "yarn nx run api:migrate",
     "api:migration:generate": "yarn nx run api:migration:generate",
     "web:dev": "yarn nx serve web",
-    "web:build": "yarn nx build web"
+    "web:build": "yarn nx build web",
+    "ios": "export LANG=en_US.UTF-8 && expo run:ios"
   },
   "private": true,
   "dependencies": {

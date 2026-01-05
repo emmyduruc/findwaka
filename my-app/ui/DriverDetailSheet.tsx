@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Linking, ScrollView } from 'react-native';
+import { View, TouchableOpacity, Linking } from 'react-native';
 import { Image } from 'expo-image';
 import { BottomSheet } from './BottomSheet';
 import { Text } from './Text';
@@ -10,7 +10,7 @@ import { colors } from '@/theme/colors';
 export type DriverDetail = {
   id: string;
   name: string;
-  vehicle: 'Bike' | 'Tricycle' | 'Car';
+  vehicle: 'Bike' | 'Keke' | 'Car';
   distance: string;
   lastSeen: string;
   phone: string;
@@ -27,6 +27,8 @@ interface DriverDetailSheetProps {
   onClose: () => void;
   driver: DriverDetail | null;
   onChat?: () => void;
+  isGuest?: boolean;
+  onSignInRequired?: () => void;
 }
 
 /**
@@ -47,15 +49,27 @@ export const DriverDetailSheet: React.FC<DriverDetailSheetProps> = ({
   onClose,
   driver,
   onChat,
+  isGuest = false,
+  onSignInRequired,
 }) => {
   if (!driver) return null;
 
   const handleCall = () => {
+    if (isGuest && onSignInRequired) {
+      onClose();
+      onSignInRequired();
+      return;
+    }
     Linking.openURL(`tel:${driver.phone}`);
     onClose();
   };
 
   const handleWhatsApp = () => {
+    if (isGuest && onSignInRequired) {
+      onClose();
+      onSignInRequired();
+      return;
+    }
     const message = 'Hello, I need a ride.';
     const url = `https://wa.me/${driver.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     Linking.openURL(url);
