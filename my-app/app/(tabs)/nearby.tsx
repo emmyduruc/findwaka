@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useAppStore } from '@/stores/useAppStore';
+import { useStorage } from '@/stores/root';
 import { Text } from '@/ui/Text';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
@@ -11,104 +12,17 @@ import { Icon } from '@/ui/Icon';
 import { DriverDetailSheet, DriverDetail } from '@/ui/DriverDetailSheet';
 import { colors } from '@/theme/colors';
 
-type VehicleFilter = 'all' | 'bike' | 'tricycle' | 'car';
-
-// Mock driver data with extended details
-const mockDrivers = [
-  {
-    id: '1',
-    name: 'John Doe',
-    vehicle: 'Bike' as const,
-    distance: '0.5 km',
-    lastSeen: '2 min ago',
-    phone: '+2348000000001',
-    rating: 4.8,
-    totalReviews: 124,
-    profileVisits: 342,
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    vehicle: 'Car' as const,
-    distance: '1.2 km',
-    lastSeen: '5 min ago',
-    phone: '+2348000000002',
-    carColor: 'Black',
-    carModel: 'Toyota Camry',
-    rating: 4.9,
-    totalReviews: 89,
-    profileVisits: 256,
-  },
-  {
-    id: '3',
-    name: 'Mike Johnson',
-    vehicle: 'Tricycle' as const,
-    distance: '0.8 km',
-    lastSeen: '1 min ago',
-    phone: '+2348000000003',
-    rating: 4.7,
-    totalReviews: 67,
-    profileVisits: 189,
-  },
-  {
-    id: '4',
-    name: 'Sarah Williams',
-    vehicle: 'Bike' as const,
-    distance: '2.1 km',
-    lastSeen: '10 min ago',
-    phone: '+2348000000004',
-    rating: 4.6,
-    totalReviews: 45,
-    profileVisits: 123,
-  },
-  {
-    id: '5',
-    name: 'David Brown',
-    vehicle: 'Car' as const,
-    distance: '1.5 km',
-    lastSeen: '3 min ago',
-    phone: '+2348000000005',
-    carColor: 'White',
-    carModel: 'Honda Accord',
-    rating: 4.5,
-    totalReviews: 78,
-    profileVisits: 201,
-  },
-  {
-    id: '6',
-    name: 'Emma Davis',
-    vehicle: 'Bike' as const,
-    distance: '0.3 km',
-    lastSeen: 'Just now',
-    phone: '+2348000000006',
-    rating: 5.0,
-    totalReviews: 34,
-    profileVisits: 98,
-  },
-];
-
-/**
- * Nearby screen - Passenger view
- * 
- * Shows list of nearby drivers with:
- * - Filter chips (All, Bike, Keke, Car)
- * - Driver cards with name, vehicle, distance, last seen
- * - Call and WhatsApp buttons
- */
 const NearbyScreen = observer(() => {
   const store = useAppStore();
+  const rootStore = useStorage();
   const isGuest = store.authStatus === 'guest';
-  const [vehicleFilter, setVehicleFilter] = useState<VehicleFilter>('all');
   const [selectedDriver, setSelectedDriver] = useState<DriverDetail | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
+  useEffect(() => {
+    rootStore.driver.fetchNearbyDrivers();
+  }, [rootStore.driver]);
 
-  const filteredDrivers =
-    vehicleFilter === 'all'
-      ? mockDrivers
-      : mockDrivers.filter((d) => d.vehicle.toLowerCase() === vehicleFilter);
-
-  const handleDriverPress = (driver: typeof mockDrivers[0]) => {
-    // Guest users cannot view driver details - prompt to login
+  const handleDriverPress = (driver: typeof rootStore.driver.filteredDrivers[0]) => {
     if (isGuest) {
       Alert.alert(
         'Sign in required',
@@ -123,7 +37,19 @@ const NearbyScreen = observer(() => {
       );
       return;
     }
-    setSelectedDriver(driver as DriverDetail);
+    setSelectedDriver({
+      id: driver.id,
+      name: driver.name,
+      vehicle: driver.vehicle as 'Bike' | 'Keke' | 'Car',
+      distance: driver.distance,
+      lastSeen: driver.lastSeen,
+      rating: driver.rating,
+      totalReviews: driver.totalReviews,
+      phone: '',
+      carColor: driver.vehicleColor || undefined,
+      carModel: driver.vehicleBrand || undefined,
+      profileVisits: 0,
+    } as DriverDetail);
     setSheetVisible(true);
   };
 
@@ -132,20 +58,18 @@ const NearbyScreen = observer(() => {
     setSelectedDriver(null);
   };
 
-  const handleChat = () => {
-    if (selectedDriver) {
-      router.push({
-        pathname: '/chat/[id]',
-        params: {
-          id: selectedDriver.id,
-          name: selectedDriver.name,
-        },
-      });
+  const handleChat = async () => {
+    if (selectedDriver && !isGuest) {
+      try {
+        const conversationId = await rootStore.chat.getOrCreateConversation(selectedDriver.id);
+        router.push(`/chat/${conversationId}`);
+      } catch (error) {
+        console.error('Failed to create conversation:', error);
+      }
     }
   };
 
-  const handleCall = (phone: string) => {
-    // Guest users cannot call drivers
+  const handleCall = (driverId: string) => {
     if (isGuest) {
       Alert.alert(
         'Sign in required',
@@ -160,11 +84,10 @@ const NearbyScreen = observer(() => {
       );
       return;
     }
-    Linking.openURL(`tel:${phone}`);
+    Alert.alert('Call', 'Phone number not available in driver profile');
   };
 
-  const handleWhatsApp = (phone: string) => {
-    // Guest users cannot contact drivers via WhatsApp
+  const handleWhatsApp = (driverId: string) => {
     if (isGuest) {
       Alert.alert(
         'Sign in required',
@@ -179,132 +102,194 @@ const NearbyScreen = observer(() => {
       );
       return;
     }
-    const message = 'Hello, I need a ride.';
-    const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-    Linking.openURL(url);
+    Alert.alert('WhatsApp', 'Phone number not available in driver profile');
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 20,
+          paddingVertical: 16,
+          backgroundColor: colors.surface,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.border,
+        }}
+      >
+        <Text variant="h2" weight="600">
+          Nearby drivers
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)/chat-list')}
+          style={{
+            position: 'relative',
+            width: 40,
+            height: 40,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+          activeOpacity={0.7}
+        >
+          <Icon name="notifications-outline" size={24} color={colors.textPrimary} />
+          {rootStore.chat.unreadCount > 0 && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                width: 12,
+                height: 12,
+                borderRadius: 6,
+                backgroundColor: colors.error,
+                borderWidth: 2,
+                borderColor: colors.surface,
+              }}
+            />
+          )}
+        </TouchableOpacity>
+      </View>
       <ScrollView
         contentContainerStyle={{ padding: 20 }}
         showsVerticalScrollIndicator={false}
       >
-        <Text variant="h2" weight="600" style={{ marginBottom: 24 }}>
-          Nearby drivers
-        </Text>
 
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
           <Chip
             label="All"
-            selected={vehicleFilter === 'all'}
-            onPress={() => setVehicleFilter('all')}
+            selected={rootStore.driver.vehicleFilter === 'all'}
+            onPress={() => rootStore.driver.setVehicleFilter('all')}
           />
           <Chip
             label="Okada"
-            selected={vehicleFilter === 'bike'}
-            onPress={() => setVehicleFilter('bike')}
+            selected={rootStore.driver.vehicleFilter === 'bike'}
+            onPress={() => rootStore.driver.setVehicleFilter('bike')}
           />
           <Chip
             label="Keke"
-            selected={vehicleFilter === 'tricycle'}
-            onPress={() => setVehicleFilter('tricycle')}
+            selected={rootStore.driver.vehicleFilter === 'tricycle'}
+            onPress={() => rootStore.driver.setVehicleFilter('tricycle')}
           />
           <Chip
             label="Moto"
-            selected={vehicleFilter === 'car'}
-            onPress={() => setVehicleFilter('car')}
+            selected={rootStore.driver.vehicleFilter === 'car'}
+            onPress={() => rootStore.driver.setVehicleFilter('car')}
           />
         </View>
 
-        {/* Driver Cards */}
-        <View style={{ gap: 16 }}>
-          {filteredDrivers.map((driver) => (
-            <TouchableOpacity
-              key={driver.id}
-              onPress={() => handleDriverPress(driver)}
-              activeOpacity={0.7}
-            >
-              <Card>
-                <View>
-                  {/* Driver Info */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <View style={{ flex: 1 }}>
-                      <Text variant="h3" weight="600" style={{ marginBottom: 4 }}>
-                        {driver.name}
-                      </Text>
-                      <Text variant="caption" color="muted" style={{ marginBottom: 8 }}>
-                        {driver.vehicle}
-                      </Text>
-                      <View style={{ flexDirection: 'row', gap: 16 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Icon name="location" size={14} color={colors.textMuted} />
-                          <Text variant="caption" color="muted">
-                            {driver.distance}
-                          </Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Icon name="time-outline" size={14} color={colors.textMuted} />
-                          <Text variant="caption" color="muted">
-                            Last seen {driver.lastSeen}
-                          </Text>
+        {rootStore.driver.isLoading && (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <Text variant="body" color="muted">
+              Loading drivers...
+            </Text>
+          </View>
+        )}
+
+        {rootStore.driver.error && (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <Text variant="body" style={{ color: colors.error }}>
+              {rootStore.driver.error}
+            </Text>
+          </View>
+        )}
+
+        {!rootStore.driver.isLoading && !rootStore.driver.error && rootStore.driver.filteredDrivers.length === 0 && (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <Text variant="body" color="muted">
+              No drivers found
+            </Text>
+          </View>
+        )}
+
+        {!rootStore.driver.isLoading && !rootStore.driver.error && (
+          <View style={{ gap: 16 }}>
+            {rootStore.driver.filteredDrivers.map((driver) => (
+              <TouchableOpacity
+                key={driver.id}
+                onPress={() => handleDriverPress(driver)}
+                activeOpacity={0.7}
+              >
+                <Card>
+                  <View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text variant="h3" weight="600" style={{ marginBottom: 4 }}>
+                          {driver.name}
+                        </Text>
+                        <Text variant="caption" color="muted" style={{ marginBottom: 8 }}>
+                          {driver.vehicle}
+                        </Text>
+                        <View style={{ flexDirection: 'row', gap: 16 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Icon name="location" size={14} color={colors.textMuted} />
+                            <Text variant="caption" color="muted">
+                              {driver.distance}
+                            </Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Icon name="time-outline" size={14} color={colors.textMuted} />
+                            <Text variant="caption" color="muted">
+                              Last seen {driver.lastSeen}
+                            </Text>
+                          </View>
                         </View>
                       </View>
                     </View>
-                  </View>
 
-                  {/* Action Buttons */}
-                  <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleCall(driver.phone);
-                      }}
-                      style={{
-                        flex: 1,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: colors.accentPrimary,
-                        paddingVertical: 12,
-                        borderRadius: 12,
-                        gap: 8,
-                      }}
-                    >
-                      <Icon name="call" size={18} color={colors.background} />
-                      <Text variant="body" weight="500" style={{ color: colors.background }}>
-                        Call
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleWhatsApp(driver.phone);
-                      }}
-                      style={{
-                        flex: 1,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: colors.surface,
-                        borderWidth: 1.5,
-                        borderColor: colors.border,
-                        paddingVertical: 12,
-                        borderRadius: 12,
-                        gap: 8,
-                      }}
-                    >
-                      <Icon name="logo-whatsapp" size={18} color={colors.accentPrimary} />
-                      <Text variant="body" weight="500">
-                        WhatsApp
-                      </Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleCall(driver.id);
+                        }}
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: colors.accentPrimary,
+                          paddingVertical: 12,
+                          borderRadius: 12,
+                          gap: 8,
+                        }}
+                      >
+                        <Icon name="call" size={18} color={colors.background} />
+                        <Text variant="body" weight="500" style={{ color: colors.background }}>
+                          Call
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleWhatsApp(driver.id);
+                        }}
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: colors.surface,
+                          borderWidth: 1.5,
+                          borderColor: colors.border,
+                          paddingVertical: 12,
+                          borderRadius: 12,
+                          gap: 8,
+                        }}
+                      >
+                        <Icon name="logo-whatsapp" size={18} color={colors.accentPrimary} />
+                        <Text variant="body" weight="500">
+                          WhatsApp
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-              </Card>
-            </TouchableOpacity>
-          ))}
-        </View>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       {/* Driver Detail Sheet */}

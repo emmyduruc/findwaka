@@ -1,4 +1,4 @@
-import { Controller, Put, Body, UseGuards } from '@nestjs/common';
+import { Controller, Put, Body, UseGuards, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PresenceService } from './presence.service';
 import { FirebaseAuthGuard } from '../../guards/firebase-auth.guard';
@@ -14,7 +14,7 @@ import { UpdateLocationDto } from './dto/update-location.dto';
 @UseGuards(FirebaseAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class PresenceController {
-  constructor(private readonly presenceService: PresenceService) {}
+  constructor(@Inject(PresenceService) private readonly presenceService: PresenceService) {}
 
   @Put('me/online')
   @Roles(UserRole.DRIVER)

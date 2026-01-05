@@ -10,6 +10,7 @@ export enum PushNotificationType {
   RIDE_COMPLETED = 'ride-completed',
   REVIEW_RECEIVED = 'review-received',
   DRIVER_VERIFIED = 'driver-verified',
+  MESSAGE = 'message',
   NEW_MESSAGE = 'new-message',
   WALLET_TRANSACTION = 'wallet-transaction',
 }

@@ -3,84 +3,70 @@ import { View, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { GiftedChat, IMessage, Bubble, InputToolbar, Send } from 'react-native-gifted-chat';
+import { observer } from 'mobx-react-lite';
+import { useStorage } from '@/stores/root';
+import { useAppStore } from '@/stores/useAppStore';
 import { Icon } from '@/ui/Icon';
 import { Text } from '@/ui/Text';
 import { colors } from '@/theme/colors';
 
-/**
- * Chat screen
- * 
- * Beautiful chat interface with:
- * - Custom styled bubbles
- * - Read receipts (green checkmarks like WhatsApp)
- * - Typing indicator
- * - Premium UI design
- */
-export default function ChatScreen() {
-  const params = useLocalSearchParams<{ id: string; name?: string }>();
-  const driverId = params.id;
-  const driverName = params.name || 'Driver';
+const ChatScreen = observer(() => {
+  const params = useLocalSearchParams<{ id: string }>();
+  const conversationId = params.id;
+  const rootStore = useStorage();
+  const appStore = useAppStore();
+  const userId = appStore.userId || '';
 
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [userId] = useState('user-1'); // Current user ID
 
-  // Mock initial messages
   useEffect(() => {
-    setMessages([
-      {
-        _id: 2,
-        text: 'Hello! I need a ride to Victoria Island.',
-        createdAt: new Date(Date.now() - 300000), // 5 minutes ago
-        user: {
-          _id: userId,
-          name: 'You',
-        },
-        sent: true,
-        received: true,
-        read: true,
-      } as any,
-      {
-        _id: 1,
-        text: 'Hi! I can help you with that. What time do you need to be picked up?',
-        createdAt: new Date(Date.now() - 360000), // 6 minutes ago
-        user: {
-          _id: driverId,
-          name: driverName,
-        },
-      } as any,
-    ]);
-  }, [driverId, driverName, userId]);
+    if (conversationId) {
+      rootStore.chat.loadConversation(conversationId);
+    }
 
-  const onSend = useCallback((newMessages: IMessage[] = []) => {
-    setMessages((previousMessages) => GiftedChat.append(previousMessages, newMessages));
-    
-    // Simulate typing indicator
-    setIsTyping(true);
-    
-    // Simulate received and read status after delay
-    setTimeout(() => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === newMessages[0]._id
-            ? { ...msg, received: true, sent: true }
-            : msg
-        )
-      );
-      setIsTyping(false);
-      
-      // Simulate read status after another delay
-      setTimeout(() => {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg._id === newMessages[0]._id ? { ...msg, received: true, sent: true, read: true } : msg
-          )
-        );
-      }, 1000);
-    }, 500);
-  }, []);
+    return () => {
+      rootStore.chat.clearCurrentConversation();
+    };
+  }, [conversationId]);
 
-  // Custom bubble component
+  useEffect(() => {
+    if (rootStore.chat.currentConversation) {
+      const giftedMessages: IMessage[] = rootStore.chat.currentConversation.messages.map((msg) => ({
+        _id: msg.id,
+        text: msg.content,
+        createdAt: new Date(msg.createdAt),
+        user: {
+          _id: msg.senderId,
+          name: msg.senderId === userId ? 'You' : 'Other',
+        },
+        sent: msg.senderId === userId,
+        received: msg.isRead,
+        read: msg.isRead && msg.senderId === userId,
+      }));
+
+      setMessages(giftedMessages.reverse());
+    }
+  }, [rootStore.chat.currentConversation, userId]);
+
+  const onSend = useCallback(
+    async (newMessages: IMessage[] = []) => {
+      if (!conversationId || newMessages.length === 0) return;
+
+      const messageText = newMessages[0].text;
+      if (!messageText.trim()) return;
+
+      setMessages((previousMessages) => GiftedChat.append(previousMessages, newMessages));
+
+      try {
+        await rootStore.chat.sendMessage(conversationId, messageText);
+      } catch (error) {
+        console.error('Failed to send message:', error);
+      }
+    },
+    [conversationId, rootStore.chat]
+  );
+
   const renderBubble = useCallback((props: any) => {
     return (
       <Bubble
@@ -136,7 +122,7 @@ export default function ChatScreen() {
         renderTime={(timeProps) => {
           const { currentMessage, position } = timeProps;
           if (!currentMessage || !currentMessage.createdAt) return null;
-          
+
           return (
             <View
               style={{
@@ -178,7 +164,6 @@ export default function ChatScreen() {
     );
   }, []);
 
-  // Custom input toolbar
   const renderInputToolbar = useCallback((props: any) => {
     return (
       <InputToolbar
@@ -211,7 +196,6 @@ export default function ChatScreen() {
     );
   }, []);
 
-  // Custom send button
   const renderSend = useCallback((props: any) => {
     return (
       <Send {...props}>
@@ -233,10 +217,9 @@ export default function ChatScreen() {
     );
   }, []);
 
-  // Typing indicator
   const renderFooter = useCallback(() => {
     if (!isTyping) return null;
-    
+
     return (
       <View
         style={{
@@ -286,19 +269,12 @@ export default function ChatScreen() {
             />
           </View>
         </View>
-        <Text
-          variant="caption"
-          style={{
-            color: colors.textMuted,
-            marginLeft: 8,
-            fontSize: 12,
-          }}
-        >
-          {driverName} is typing...
-        </Text>
       </View>
     );
-  }, [isTyping, driverName]);
+  }, [isTyping]);
+
+  const conversation = rootStore.chat.conversations.find((c) => c.id === conversationId);
+  const participantName = conversation?.participantName || 'User';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
@@ -307,7 +283,6 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {/* Header */}
         <View
           style={{
             flexDirection: 'row',
@@ -333,7 +308,7 @@ export default function ChatScreen() {
           </TouchableOpacity>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text variant="body" weight="600" style={{ fontSize: 16 }}>
-              {driverName}
+              {participantName}
             </Text>
             {isTyping && (
               <Text variant="caption" style={{ color: colors.accentPrimary, fontSize: 12, marginTop: 2 }}>
@@ -343,7 +318,6 @@ export default function ChatScreen() {
           </View>
         </View>
 
-        {/* Chat */}
         <GiftedChat
           messages={messages}
           onSend={onSend}
@@ -368,5 +342,6 @@ export default function ChatScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
+});
 
+export default ChatScreen;

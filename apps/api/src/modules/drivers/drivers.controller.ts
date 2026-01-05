@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Query, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Query, Body, UseGuards, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { DriversService } from './drivers.service';
 import { FirebaseAuthGuard } from '../../guards/firebase-auth.guard';
@@ -15,7 +15,7 @@ import { PublicDriversQueryDto } from './dto/public-drivers-query.dto';
 @ApiTags('drivers')
 @Controller('drivers')
 export class DriversController {
-  constructor(private readonly driversService: DriversService) {}
+  constructor(@Inject(DriversService) private readonly driversService: DriversService) {}
 
   @Post('me')
   @UseGuards(FirebaseAuthGuard, RolesGuard)

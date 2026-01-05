@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PassengersService } from './passengers.service';
 import { FirebaseAuthGuard } from '../../guards/firebase-auth.guard';
@@ -14,7 +14,7 @@ import { UpdatePassengerDto, PassengerResponseDto } from './dto/update-passenger
 @UseGuards(FirebaseAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class PassengersController {
-  constructor(private readonly passengersService: PassengersService) {}
+  constructor(@Inject(PassengersService) private readonly passengersService: PassengersService) {}
 
   @Get('me')
   @Roles(UserRole.PASSENGER)

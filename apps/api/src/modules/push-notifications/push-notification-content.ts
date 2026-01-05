@@ -50,6 +50,10 @@ export const notificationContent: Record<PushNotificationType, NotificationConte
     title: 'Account Verified',
     body: 'Congratulations! Your driver account has been verified. You can now accept ride requests.',
   },
+  [PushNotificationType.MESSAGE]: {
+    title: 'New Message',
+    body: 'You have a new message. Tap to view.',
+  },
   [PushNotificationType.NEW_MESSAGE]: {
     title: 'New Message',
     body: 'You have a new message. Tap to view.',

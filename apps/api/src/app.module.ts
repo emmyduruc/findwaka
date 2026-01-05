@@ -12,6 +12,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { PushNotificationsModule } from './modules/push-notifications/push-notifications.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { PushNotificationsModule } from './modules/push-notifications/push-notif
     AdminModule,
     ReviewsModule,
     PushNotificationsModule,
+    ChatModule,
   ],
 })
 export class AppModule {

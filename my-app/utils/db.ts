@@ -37,4 +37,11 @@ export const DBUtils = {
     approveDocument: (id: string) => `/admin/documents/${id}/approve`,
     rejectDocument: (id: string) => `/admin/documents/${id}/reject`,
   },
+  chat: {
+    conversations: `/chat/conversations`,
+    getConversation: (id: string) => `/chat/conversations/${id}`,
+    getOrCreateConversation: (otherUserId: string) => `/chat/conversations/${otherUserId}`,
+    messages: `/chat/messages`,
+    markAsRead: (id: string) => `/chat/conversations/${id}/read`,
+  },
 };

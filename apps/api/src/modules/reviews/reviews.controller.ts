@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ReviewsService } from './reviews.service';
 import { FirebaseAuthGuard } from '../../guards/firebase-auth.guard';
@@ -13,7 +13,7 @@ import { ReviewResponseDto } from './dto/review-response.dto';
 @ApiTags('reviews')
 @Controller('drivers')
 export class ReviewsController {
-  constructor(private readonly reviewsService: ReviewsService) {}
+  constructor(@Inject(ReviewsService) private readonly reviewsService: ReviewsService) {}
 
   @Post(':driverId/reviews')
   @UseGuards(FirebaseAuthGuard, RolesGuard)

@@ -15,18 +15,6 @@ const STORAGE_KEYS = {
   phoneNumber: 'phoneNumber',
 };
 
-/**
- * App Store for navigation and auth state
- * 
- * This store manages:
- * - Onboarding state
- * - Authentication status (guest/loggedOut/loggedIn)
- * - User role (passenger/driver)
- * - Driver onboarding completion
- * - Firebase authentication integration
- * 
- * All state is persisted to Expo SecureStore.
- */
 export class AppStore {
   onboardingSeen: boolean = false;
   authStatus: AuthStatus = 'loggedOut';
@@ -35,7 +23,8 @@ export class AppStore {
   userId: string | null = null;
   phoneNumber: string | null = null;
   isAuthLoading: boolean = false;
-  private _confirmation: any = null; // Firebase phone auth confirmation
+  isHydrated: boolean = false;
+  private _confirmation: any = null;
   
   get confirmation() {
     return this._confirmation;
@@ -53,21 +42,14 @@ export class AppStore {
     this.setupAuthStateListener();
   }
 
-  /**
-   * Setup Firebase auth state listener
-   */
   private setupAuthStateListener() {
     auth().onAuthStateChanged((user) => {
       if (user) {
-        // User is authenticated in Firebase
         if (this.authStatus === 'loggedIn') {
-          // Already logged in, just sync userId
           runInAction(() => {
             this.userId = user.uid;
           });
         } else if (this.authStatus === 'loggedOut') {
-          // Firebase says user is logged in but our store says logged out
-          // This can happen on hot reload - restore the session
           runInAction(() => {
             this.authStatus = 'loggedIn';
             this.userId = user.uid;
@@ -76,15 +58,11 @@ export class AppStore {
           this.setUserId(user.uid);
         }
       } else if (!user && this.authStatus === 'loggedIn') {
-        // User was logged out externally (e.g., from another device)
         this.logout();
       }
     });
   }
 
-  /**
-   * Load persisted state from SecureStore and restore Firebase auth session
-   */
   async hydrate() {
     try {
       const onboardingSeen = await SecureStore.getItemAsync(STORAGE_KEYS.onboardingSeen);
@@ -100,7 +78,6 @@ export class AppStore {
         this.onboardingSeen = onboardingSeen === 'true';
       }
       if (role) {
-        // Convert stored string to enum (handle both old lowercase and new uppercase)
         const normalizedRole = role.toUpperCase() as UserRole;
         if (Object.values(UserRole).includes(normalizedRole)) {
           this.role = normalizedRole;
@@ -116,66 +93,53 @@ export class AppStore {
         this.phoneNumber = phoneNumber;
       }
 
-      // Check Firebase auth state to restore session after hot reload
       const firebaseUser = auth().currentUser;
-      if (firebaseUser && authStatus === 'loggedIn') {
-        // User is still authenticated in Firebase, restore session
+      if (firebaseUser) {
         runInAction(() => {
           this.authStatus = 'loggedIn';
           this.userId = firebaseUser.uid;
+          this.isHydrated = true;
         });
-      } else if (authStatus === 'loggedIn' && !firebaseUser) {
-        // Stored state says logged in but Firebase says not - clear it
-        runInAction(() => {
-          this.authStatus = 'loggedOut';
-          this.userId = null;
-        });
-        await this.setAuthStatus('loggedOut');
-        await SecureStore.deleteItemAsync(STORAGE_KEYS.userId);
+        await this.setAuthStatus('loggedIn');
+        await this.setUserId(firebaseUser.uid);
       } else if (authStatus) {
-        // Restore auth status (guest or loggedOut)
-        this.authStatus = authStatus as AuthStatus;
+        runInAction(() => {
+          this.authStatus = authStatus as AuthStatus;
+          this.isHydrated = true;
+        });
+      } else {
+        runInAction(() => {
+          this.isHydrated = true;
+        });
       }
     } catch (error) {
       console.error('Failed to hydrate app store:', error);
+      runInAction(() => {
+        this.isHydrated = true;
+      });
     }
   }
 
-  /**
-   * Mark onboarding as seen
-   */
   async setOnboardingSeen(value: boolean) {
     this.onboardingSeen = value;
     await SecureStore.setItemAsync(STORAGE_KEYS.onboardingSeen, value.toString());
   }
 
-  /**
-   * Set authentication status
-   */
   async setAuthStatus(status: AuthStatus) {
     this.authStatus = status;
     await SecureStore.setItemAsync(STORAGE_KEYS.authStatus, status);
   }
 
-  /**
-   * Set user role
-   */
   async setRole(role: UserRole) {
     this.role = role;
     await SecureStore.setItemAsync(STORAGE_KEYS.role, role);
   }
 
-  /**
-   * Set driver onboarding completion status
-   */
   async setDriverOnboardingComplete(value: boolean) {
     this.driverOnboardingComplete = value;
     await SecureStore.setItemAsync(STORAGE_KEYS.driverOnboardingComplete, value.toString());
   }
 
-  /**
-   * Set user ID
-   */
   async setUserId(userId: string | null) {
     this.userId = userId;
     if (userId) {
@@ -185,9 +149,6 @@ export class AppStore {
     }
   }
 
-  /**
-   * Set phone number
-   */
   async setPhoneNumber(phoneNumber: string | null) {
     this.phoneNumber = phoneNumber;
     if (phoneNumber) {
@@ -197,17 +158,12 @@ export class AppStore {
     }
   }
 
-  /**
-   * Send phone verification code
-   */
   async sendPhoneVerificationCode(phoneNumber: string): Promise<void> {
     try {
       this.isAuthLoading = true;
       
-      // Firebase phone auth automatically handles reCAPTCHA on native
       const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
       
-      // Save phone number for future use
       await this.setPhoneNumber(phoneNumber);
       
       runInAction(() => {
@@ -221,9 +177,6 @@ export class AppStore {
     }
   }
 
-  /**
-   * Verify phone code and authenticate user
-   */
   async verifyPhoneCode(code: string, role: UserRole): Promise<void> {
     try {
       if (!this.confirmation) {
@@ -242,7 +195,6 @@ export class AppStore {
       const firebaseIdToken = await user.getIdToken(true);
       await this.authService.initializeUser(firebaseIdToken, role);
 
-      // Update store
       runInAction(() => {
         this.authStatus = 'loggedIn';
         this.role = role;
@@ -254,7 +206,6 @@ export class AppStore {
         }
       });
 
-      // Persist to SecureStore
       await Promise.all([
         this.setAuthStatus('loggedIn'),
         this.setRole(role),
@@ -262,7 +213,6 @@ export class AppStore {
         this.setUserId(user.uid),
       ]);
 
-      //Todo: Log analytics event
       try {
       
       } catch (analyticsError) {
@@ -281,9 +231,6 @@ export class AppStore {
     }
   }
 
-  /**
-   * Continue as guest
-   */
   async continueAsGuest() {
     await Promise.all([
       this.setAuthStatus('guest'),
@@ -293,9 +240,6 @@ export class AppStore {
     router.replace('/(tabs)/nearby');
   }
 
-  /**
-   * Mock passenger login (for testing - will be removed)
-   */
   async mockPassengerLogin() {
     await Promise.all([
       this.setAuthStatus('loggedIn'),
@@ -305,9 +249,6 @@ export class AppStore {
     router.replace('/(tabs)/nearby');
   }
 
-  /**
-   * Mock driver login (for testing - will be removed)
-   */
   async mockDriverLogin() {
     await Promise.all([
       this.setAuthStatus('loggedIn'),
@@ -318,18 +259,13 @@ export class AppStore {
     router.replace('/(driver-onboarding)/step-1');
   }
 
-  /**
-   * Log out
-   */
   async logout() {
     try {
-      // Sign out from Firebase
       await auth().signOut();
     } catch (error) {
       console.error('Error signing out from Firebase:', error);
     }
 
-    // Clear store
     runInAction(() => {
       this.authStatus = 'loggedOut';
       this.role = UserRole.PASSENGER;
@@ -338,7 +274,6 @@ export class AppStore {
       this.driverOnboardingComplete = false;
     });
 
-    // Clear persisted data
     await Promise.all([
       this.setAuthStatus('loggedOut'),
       SecureStore.deleteItemAsync(STORAGE_KEYS.role),
@@ -346,16 +281,11 @@ export class AppStore {
       SecureStore.deleteItemAsync(STORAGE_KEYS.driverOnboardingComplete),
     ]);
 
-    // Clear backend token
     await _setToken('');
 
-    // Navigate to welcome screen (user can continue as guest or login)
     router.replace('/(onboarding)/welcome');
   }
 
-  /**
-   * Reset onboarding (for dev/testing)
-   */
   async resetOnboarding() {
     await SecureStore.deleteItemAsync(STORAGE_KEYS.onboardingSeen);
     this.onboardingSeen = false;

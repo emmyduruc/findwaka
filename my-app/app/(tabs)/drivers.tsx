@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { observer } from 'mobx-react-lite';
-import * as Location from 'expo-location';
 import { useAppStore } from '@/stores/useAppStore';
+import { useStorage } from '@/stores/root';
 import { Button } from '@/ui/Button';
 import { Text } from '@/ui/Text';
 import { Card } from '@/ui/Card';
@@ -12,6 +12,9 @@ import { Toggle } from '@/ui/Toggle';
 import { Icon } from '@/ui/Icon';
 import { colors } from '@/theme/colors';
 import { UserRole } from '@/models/user.model';
+import { createLocationService } from '@/services/location';
+import { createPresenceService } from '@/services/presence';
+import { loggerService } from '@/services/logger';
 
 /**
  * Drivers screen - Driver dashboard
@@ -21,21 +24,32 @@ import { UserRole } from '@/models/user.model';
  */
 const DriversScreen = observer(() => {
   const store = useAppStore();
+  const rootStore = useStorage();
   const [isOnline, setIsOnline] = useState(false);
   const isDriver = store.role === UserRole.DRIVER && store.authStatus === 'loggedIn';
+  const locationService = createLocationService(loggerService);
+  const presenceService = createPresenceService();
+
+  useEffect(() => {
+    if (isDriver) {
+      rootStore.chat.init();
+    }
+    return () => {
+      if (isOnline) {
+        locationService.stopTracking();
+        presenceService.setOffline();
+      }
+    };
+  }, [isDriver]);
 
   const handleGoOnline = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        setIsOnline(true);
-        // TODO: Start location tracking and update driver status
-      } else {
-        Alert.alert('Permission Required', 'Location permission is required to go online.');
-      }
-    } catch (error) {
-      console.error('Location permission error:', error);
-      Alert.alert('Error', 'Failed to request location permission.');
+      await presenceService.setOnline();
+      await rootStore.chat.connectWebSocket();
+      await locationService.startTracking();
+      setIsOnline(true);
+    } catch (error: any) {
+      console.error('Error going online:', error);
     }
   };
 
@@ -43,8 +57,13 @@ const DriversScreen = observer(() => {
     if (value) {
       await handleGoOnline();
     } else {
-      setIsOnline(false);
-      // TODO: Stop location tracking and update driver status
+      try {
+        locationService.stopTracking();
+        await presenceService.setOffline();
+        setIsOnline(false);
+      } catch (error: any) {
+        console.error('Error going offline:', error);
+      }
     }
   };
 
@@ -88,12 +107,10 @@ const DriversScreen = observer(() => {
         contentContainerStyle={{ padding: 20 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <Text variant="h2" weight="600" style={{ marginBottom: 24 }}>
           Driver dashboard
         </Text>
 
-        {/* Online Toggle Card */}
         <Card style={{ marginBottom: 24 }}>
           <View style={{ gap: 24 }}>
             <Toggle
@@ -112,14 +129,13 @@ const DriversScreen = observer(() => {
           </View>
         </Card>
 
-        {/* Info Card */}
         <Card>
           <View style={{ gap: 12 }}>
             <Text variant="body" weight="500" style={{ marginBottom: 8 }}>
               Driver status
             </Text>
             <Text variant="caption" color="muted">
-              When online, you'll appear in the Nearby drivers list for passengers.
+              When online, you&apos;ll appear in the Nearby drivers list for passengers.
             </Text>
           </View>
         </Card>
