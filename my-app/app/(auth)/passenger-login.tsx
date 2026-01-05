@@ -58,7 +58,6 @@ const PassengerLoginScreen = observer(() => {
 
     try {
       await store.verifyPhoneCode(otpCode, 'passenger');
-      // Navigation is handled in the store
     } catch (error: any) {
       console.error('Error verifying code:', error);
       setError(error.message || 'Invalid verification code. Please try again.');

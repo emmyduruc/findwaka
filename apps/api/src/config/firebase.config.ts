@@ -1,27 +1,13 @@
 import * as admin from 'firebase-admin';
+import serviceAccount from '../../service-account.json';
 
-let firebaseApp: admin.app.App | null = null;
-
-export function initializeFirebase(): void {
-  if (firebaseApp) {
-    return;
-  }
-
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!serviceAccountJson) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is required');
-  }
-
-  const serviceAccount = JSON.parse(serviceAccountJson);
-  firebaseApp = admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
   });
+  console.log('Firebase Admin SDK initialized successfully');
 }
 
 export function getFirebaseApp(): admin.app.App {
-  if (!firebaseApp) {
-    initializeFirebase();
-  }
-  return firebaseApp!;
+  return admin.apps[0];
 }
-

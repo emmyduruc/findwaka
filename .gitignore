@@ -13,3 +13,7 @@ apps/api/.env
 apps/web/.env
 apps/expo/.env
 
+# Firebase service account (sensitive)
+service-account.json
+apps/api/service-account.json
+

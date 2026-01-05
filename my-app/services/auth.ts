@@ -11,17 +11,19 @@ export const createAuthService = () => {
      */
     bootstrap: async (firebaseIdToken: string, role: 'passenger' | 'driver') => {
       try {
+        console.log('Sending bootstrap request with token:', firebaseIdToken.substring(0, 50) + '...');
         const response = await axiosInstance.post(
           DBUtils.auth.bootstrap,
           { role },
           {
             headers: {
-              "firebase-id-token": firebaseIdToken,
+              Authorization: `Bearer ${firebaseIdToken}`,
             },
           }
         );
         return response.data;
-      } catch (error) {
+      } catch (error: any) {
+        console.error('Bootstrap error:', error.response?.data || error.message);
         throw error;
       }
     },

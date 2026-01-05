@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { typeOrmConfig } from './config/typeorm.config';
-import { initializeFirebase } from './config/firebase.config';
+import './config/firebase.config';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { PassengersModule } from './modules/passengers/passengers.module';
@@ -32,11 +32,7 @@ import { PushNotificationsModule } from './modules/push-notifications/push-notif
 })
 export class AppModule {
   constructor() {
-    try {
-      initializeFirebase();
-    } catch (error) {
-      console.error('Failed to initialize Firebase in AppModule:', error.message);
-    }
+    // Firebase is initialized automatically when firebase.config.ts is imported
   }
 }
 

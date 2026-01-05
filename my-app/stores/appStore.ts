@@ -189,7 +189,7 @@ export class AppStore {
 
       // Get Firebase ID token
       const firebaseIdToken = await user.getIdToken(true);
-
+console.log('firebaseIdToken.......', firebaseIdToken);
       // Bootstrap user with backend (creates user in DB if new, or returns existing)
       const bootstrapResponse = await this.authService.bootstrap(firebaseIdToken, role);
 

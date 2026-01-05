@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
 import { getToken, _setToken } from "@/services/storage";
 
-const baseUrl = process.env.BACKEND_URL;
+const baseUrl = process.env.EXPO_PUBLIC_BASE_URL;
 const axiosInstance = axios.create({
     baseURL: baseUrl,
 });
@@ -31,11 +31,13 @@ axiosInstance.interceptors.request.use(
         
         const token = await getToken();
 
-        if (token) {
+        if (token && !request.headers.Authorization && !request.headers.authorization) {
             request.headers.Authorization = `Bearer ${token}`;
         }
 
-        console.log(`>>>>>>>>>>>> {${request.method?.toUpperCase()} - ${request.url}} sent`);
+        const authHeader = request.headers.Authorization || request.headers.authorization;
+        console.log(`>>>>>>>>>>>> {${request.method?.toUpperCase()} - ${request.baseURL || ''}${request.url}} sent`);
+        console.log(`Authorization header:`, authHeader ? `${authHeader.substring(0, 50)}...` : 'NOT SET');
         if (request.data) console.log(JSON.stringify(request.data));
         return request;
     },
