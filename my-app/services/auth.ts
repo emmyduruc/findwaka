@@ -1,29 +1,30 @@
 import { DBUtils } from "@/utils/db";
 import { IRootStore } from "@/stores/root";
 import axiosInstance from "@/utils/fetch";
+import { UserRole } from "@/models/user.model";
 
 export const createAuthService = () => {
   let root: IRootStore;
   return {
     /**
-     * Bootstrap user account (login/register)
+     * Initialize user account (sign in or sign up)
      * This endpoint handles both new user registration and existing user login
      */
-    bootstrap: async (firebaseIdToken: string, role: 'passenger' | 'driver') => {
+    initializeUser: async (firebaseIdToken: string, role: UserRole) => {
       try {
-        console.log('Sending bootstrap request with token:', firebaseIdToken.substring(0, 50) + '...');
+        const roleValue = String(role).toUpperCase();
         const response = await axiosInstance.post(
-          DBUtils.auth.bootstrap,
-          { role },
+          DBUtils.auth.initialize,
+          { role: roleValue },
           {
             headers: {
               Authorization: `Bearer ${firebaseIdToken}`,
             },
           }
         );
-        return response.data;
+        return response;
       } catch (error: any) {
-        console.error('Bootstrap error:', error.response?.data || error.message);
+        console.error('Initialize user error:', error.response?.data || error.message);
         throw error;
       }
     },

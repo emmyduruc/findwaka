@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useAppStore } from '@/stores/useAppStore';
 import { Button } from '@/ui/Button';
@@ -11,6 +10,7 @@ import { Icon } from '@/ui/Icon';
 import { BackButton } from '@/ui/BackButton';
 import { colors } from '@/theme/colors';
 import { phoneSchema } from '@/utils/validation';
+import { UserRole } from '@/models/user.model';
 
 /**
  * Driver login screen
@@ -29,6 +29,13 @@ const DriverLoginScreen = observer(() => {
   const [showOTP, setShowOTP] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Load saved phone number on mount
+  useEffect(() => {
+    if (store.phoneNumber) {
+      setPhone(store.phoneNumber);
+    }
+  }, [store.phoneNumber]);
 
   const handleSendCode = async () => {
     if (!isPhoneValid || !phone.trim()) return;
@@ -57,19 +64,13 @@ const DriverLoginScreen = observer(() => {
     setError(null);
 
     try {
-      await store.verifyPhoneCode(otpCode, 'driver');
+      await store.verifyPhoneCode(otpCode, UserRole.DRIVER);
       // Navigation is handled in the store
     } catch (error: any) {
       console.error('Error verifying code:', error);
       setError(error.message || 'Invalid verification code. Please try again.');
       Alert.alert('Error', error.message || 'Invalid verification code. Please try again.');
     }
-  };
-
-  const handleMockLogin = async () => {
-    if (!isPhoneValid) return;
-    await store.mockDriverLogin();
-    router.replace('/(driver-onboarding)/step-1');
   };
 
   const handleBackToPhone = () => {
@@ -100,7 +101,7 @@ const DriverLoginScreen = observer(() => {
                 Enter verification code
               </Text>
               <Text variant="body" color="muted" style={{ marginBottom: 48 }}>
-                We sent a 6-digit code to {phone}
+                We sent a 6-digit code to {store.phoneNumber || phone}
               </Text>
 
               {/* OTP Input */}
@@ -203,14 +204,6 @@ const DriverLoginScreen = observer(() => {
                 size="lg"
                 fullWidth
                 disabled={!isPhoneValid || !phone.trim() || store.isAuthLoading}
-              />
-              <Button
-                label="Mock login (dev)"
-                onPress={handleMockLogin}
-                variant="outline"
-                size="lg"
-                fullWidth
-                disabled={store.isAuthLoading}
               />
             </View>
           </View>

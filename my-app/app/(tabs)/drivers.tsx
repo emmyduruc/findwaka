@@ -11,6 +11,7 @@ import { Card } from '@/ui/Card';
 import { Toggle } from '@/ui/Toggle';
 import { Icon } from '@/ui/Icon';
 import { colors } from '@/theme/colors';
+import { UserRole } from '@/models/user.model';
 
 /**
  * Drivers screen - Driver dashboard
@@ -21,7 +22,7 @@ import { colors } from '@/theme/colors';
 const DriversScreen = observer(() => {
   const store = useAppStore();
   const [isOnline, setIsOnline] = useState(false);
-  const isDriver = store.role === 'driver' && store.authStatus === 'loggedIn';
+  const isDriver = store.role === UserRole.DRIVER && store.authStatus === 'loggedIn';
 
   const handleGoOnline = async () => {
     try {

@@ -12,6 +12,7 @@ module.exports = function (api) {
           root: ["./"],
           alias: {
             "@": "./",
+            "@waka/shared": "../packages/shared/src/index.ts",
           },
           extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
         },

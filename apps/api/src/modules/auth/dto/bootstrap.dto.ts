@@ -4,7 +4,7 @@ import { UserRole } from '@waka/shared';
 
 export class BootstrapDto {
   @ApiProperty({ enum: UserRole })
-  @IsEnum(UserRole)
+  @IsEnum(UserRole, { message: 'Role must be one of: PASSENGER, DRIVER, ADMIN' })
   role: UserRole;
 }
 

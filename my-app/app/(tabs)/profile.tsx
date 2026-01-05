@@ -13,6 +13,7 @@ import { Card } from '@/ui/Card';
 import { ListRow } from '@/ui/ListRow';
 import { Icon } from '@/ui/Icon';
 import { Avatar } from '@/ui/Avatar';
+import { UserRole } from '@/models/user.model';
 import { ImagePickerModal } from '@/ui/ImagePickerModal';
 import { colors } from '@/theme/colors';
 
@@ -26,7 +27,6 @@ import { colors } from '@/theme/colors';
  * - Profile editing
  * - Role switch buttons
  * - Log out button
- * - Reset onboarding (dev)
  */
 const ProfileScreen = observer(() => {
   const store = useAppStore();
@@ -44,8 +44,8 @@ const ProfileScreen = observer(() => {
 
   const getCurrentMode = () => {
     if (store.authStatus === 'guest') return 'Guest';
-    if (store.authStatus === 'loggedIn' && store.role === 'driver') return 'Driver';
-    if (store.authStatus === 'loggedIn' && store.role === 'passenger') return 'Passenger';
+    if (store.authStatus === 'loggedIn' && store.role === UserRole.DRIVER) return 'Driver';
+    if (store.authStatus === 'loggedIn' && store.role === UserRole.PASSENGER) return 'Passenger';
     return 'Logged out';
   };
 
@@ -110,7 +110,7 @@ const ProfileScreen = observer(() => {
   };
 
   const handleSwitchToPassenger = async () => {
-    await store.setRole('passenger');
+    await store.setRole(UserRole.PASSENGER);
     if (store.authStatus === 'loggedOut') {
       await store.continueAsGuest();
     }
@@ -123,12 +123,7 @@ const ProfileScreen = observer(() => {
 
   const handleLogout = async () => {
     await store.logout();
-    router.replace('/(onboarding)/welcome');
-  };
-
-  const handleResetOnboarding = async () => {
-    await store.resetOnboarding();
-    router.replace('/(onboarding)/welcome');
+    // Navigation is handled by store.logout()
   };
 
   return (
@@ -203,7 +198,7 @@ const ProfileScreen = observer(() => {
         </Card>
 
         {/* Profile Stats Card */}
-        {store.authStatus === 'loggedIn' && store.role === 'driver' && (
+        {store.authStatus === 'loggedIn' && store.role === UserRole.DRIVER && (
           <Card style={{ marginBottom: 24 }}>
             <View style={{ gap: 20 }}>
               <Text variant="label" weight="600" style={{ marginBottom: 8 }}>
@@ -292,22 +287,6 @@ const ProfileScreen = observer(() => {
             />
           )}
         </View>
-
-        {/* Dev Actions */}
-        <Card>
-          <View style={{ gap: 16 }}>
-            <Text variant="label" weight="500" color="muted">
-              Developer
-            </Text>
-            <Button
-              label="Reset onboarding"
-              onPress={handleResetOnboarding}
-              variant="ghost"
-              size="md"
-              fullWidth
-            />
-          </View>
-        </Card>
       </ScrollView>
 
       {/* Image Picker Modal */}

@@ -4,6 +4,7 @@ import { observer } from 'mobx-react-lite';
 import { useAppStore } from '@/stores/useAppStore';
 import { Icon } from '@/ui/Icon';
 import { colors } from '@/theme/colors';
+import { UserRole } from '@/models/user.model';
 
 /**
  * Tabs layout
@@ -15,7 +16,6 @@ import { colors } from '@/theme/colors';
  */
 const TabsLayout = observer(() => {
   const store = useAppStore();
-  const isDriver = store.role === 'driver' && store.authStatus === 'loggedIn';
 
   return (
     <Tabs

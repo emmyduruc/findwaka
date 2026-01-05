@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useAppStore } from '@/stores/useAppStore';
 import { Button } from '@/ui/Button';
@@ -11,6 +10,7 @@ import { Icon } from '@/ui/Icon';
 import { BackButton } from '@/ui/BackButton';
 import { colors } from '@/theme/colors';
 import { phoneSchema } from '@/utils/validation';
+import { UserRole } from '@/models/user.model';
 
 /**
  * Passenger login screen
@@ -30,13 +30,18 @@ const PassengerLoginScreen = observer(() => {
   const [otpCode, setOtpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (store.phoneNumber) {
+      setPhone(store.phoneNumber);
+    }
+  }, [store.phoneNumber]);
+
   const handleSendCode = async () => {
     if (!isPhoneValid || !phone.trim()) return;
 
     setError(null);
     
     try {
-      // Format phone number (ensure it starts with country code)
       const formattedPhone = phone.startsWith('+') ? phone : `+234${phone.replace(/^0/, '')}`;
       
       await store.sendPhoneVerificationCode(formattedPhone);
@@ -44,30 +49,23 @@ const PassengerLoginScreen = observer(() => {
     } catch (error: any) {
       console.error('Error sending verification code:', error);
       setError(error.message || 'Failed to send verification code. Please try again.');
-      Alert.alert('Error', error.message || 'Failed to send verification code. Please try again.');
     }
   };
 
   const handleVerifyCode = async () => {
     if (!otpCode.trim() || otpCode.length !== 6) {
-      Alert.alert('Invalid Code', 'Please enter the 6-digit verification code.');
+        setError('Invalid code. Please enter the 6-digit verification code.');
       return;
     }
 
     setError(null);
 
     try {
-      await store.verifyPhoneCode(otpCode, 'passenger');
+      await store.verifyPhoneCode(otpCode, UserRole.PASSENGER);
     } catch (error: any) {
       console.error('Error verifying code:', error);
       setError(error.message || 'Invalid verification code. Please try again.');
-      Alert.alert('Error', error.message || 'Invalid verification code. Please try again.');
     }
-  };
-
-  const handleMockLogin = async () => {
-    await store.mockPassengerLogin();
-    router.replace('/(tabs)/nearby');
   };
 
   const handleBackToPhone = () => {
@@ -98,7 +96,7 @@ const PassengerLoginScreen = observer(() => {
                 Enter verification code
               </Text>
               <Text variant="body" color="muted" style={{ marginBottom: 48 }}>
-                We sent a 6-digit code to {phone}
+                We sent a 6-digit code to {store.phoneNumber || phone}
               </Text>
 
               {/* OTP Input */}
@@ -201,14 +199,6 @@ const PassengerLoginScreen = observer(() => {
                 size="lg"
                 fullWidth
                 disabled={!isPhoneValid || !phone.trim() || store.isAuthLoading}
-              />
-              <Button
-                label="Mock login (dev)"
-                onPress={handleMockLogin}
-                variant="outline"
-                size="lg"
-                fullWidth
-                disabled={store.isAuthLoading}
               />
             </View>
           </View>

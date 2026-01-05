@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { FirebaseAuthGuard } from '../../guards/firebase-auth.guard';
@@ -11,16 +11,16 @@ import { BootstrapDto, BootstrapResponseDto } from './dto/bootstrap.dto';
 @UseGuards(FirebaseAuthGuard)
 @ApiBearerAuth()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
-  @Post('bootstrap')
-  @ApiOperation({ summary: 'Bootstrap user account' })
+  @Post('initialize')
+  @ApiOperation({ summary: 'Initialize user account (sign in or sign up)' })
   @ApiResponse({ status: 200, type: BootstrapResponseDto })
-  async bootstrap(
+  async initializeUser(
     @CurrentUser() firebaseUser: FirebaseUser,
     @Body() dto: BootstrapDto,
   ): Promise<BootstrapResponseDto> {
-    return this.authService.bootstrap(firebaseUser, dto.role);
+    return this.authService.initializeUser(firebaseUser, dto.role);
   }
 }
 

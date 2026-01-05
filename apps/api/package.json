@@ -3,8 +3,17 @@
   "version": "0.0.1",
   "license": "MIT",
   "private": true,
+  "scripts": {
+    "dev": "tsx watch --tsconfig tsconfig.json src/main.ts",
+    "start": "node dist/main.js",
+    "build": "tsc -p tsconfig.json",
+    "migrate": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/config/data-source.ts",
+    "migration:generate": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate src/migrations/Migration",
+    "seed:drivers": "tsx src/scripts/seed-drivers.ts"
+  },
   "dependencies": {
-    "@waka/shared": "*"
+    "@waka/shared": "*",
+    "@faker-js/faker": "^9.0.0"
   }
 }
 

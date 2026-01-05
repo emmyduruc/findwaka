@@ -2,7 +2,7 @@ const backendUrl = process.env.EXPO_PUBLIC_BASE_URL;
 console.log('backendUrl........s..', backendUrl);
 export const DBUtils = {
   auth: {
-    bootstrap: `/auth/bootstrap`,
+    initialize: `/auth/initialize`,
   },
   users: {
     getMe: `/users/me`,

@@ -4,9 +4,7 @@ import { router } from 'expo-router';
 import { auth } from '@/config/firebase';
 import { createAuthService } from '@/services/auth';
 import { _setToken } from '@/services/storage';
-
-export type AuthStatus = 'guest' | 'loggedOut' | 'loggedIn';
-export type UserRole = 'passenger' | 'driver';
+import { UserRole, AuthStatus } from '@/models/user.model';
 
 const STORAGE_KEYS = {
   onboardingSeen: 'onboardingSeen',
@@ -14,6 +12,7 @@ const STORAGE_KEYS = {
   role: 'role',
   driverOnboardingComplete: 'driverOnboardingComplete',
   userId: 'userId',
+  phoneNumber: 'phoneNumber',
 };
 
 /**
@@ -31,9 +30,10 @@ const STORAGE_KEYS = {
 export class AppStore {
   onboardingSeen: boolean = false;
   authStatus: AuthStatus = 'loggedOut';
-  role: UserRole = 'passenger';
+  role: UserRole = UserRole.PASSENGER;
   driverOnboardingComplete: boolean = false;
   userId: string | null = null;
+  phoneNumber: string | null = null;
   isAuthLoading: boolean = false;
   private _confirmation: any = null; // Firebase phone auth confirmation
   
@@ -58,20 +58,32 @@ export class AppStore {
    */
   private setupAuthStateListener() {
     auth().onAuthStateChanged((user) => {
-      if (user && this.authStatus === 'loggedIn') {
-        // User is authenticated, sync with our store
-        runInAction(() => {
-          this.userId = user.uid;
-        });
+      if (user) {
+        // User is authenticated in Firebase
+        if (this.authStatus === 'loggedIn') {
+          // Already logged in, just sync userId
+          runInAction(() => {
+            this.userId = user.uid;
+          });
+        } else if (this.authStatus === 'loggedOut') {
+          // Firebase says user is logged in but our store says logged out
+          // This can happen on hot reload - restore the session
+          runInAction(() => {
+            this.authStatus = 'loggedIn';
+            this.userId = user.uid;
+          });
+          this.setAuthStatus('loggedIn');
+          this.setUserId(user.uid);
+        }
       } else if (!user && this.authStatus === 'loggedIn') {
-        // User was logged out externally
+        // User was logged out externally (e.g., from another device)
         this.logout();
       }
     });
   }
 
   /**
-   * Load persisted state from SecureStore
+   * Load persisted state from SecureStore and restore Firebase auth session
    */
   async hydrate() {
     try {
@@ -82,21 +94,47 @@ export class AppStore {
         STORAGE_KEYS.driverOnboardingComplete
       );
       const userId = await SecureStore.getItemAsync(STORAGE_KEYS.userId);
+      const phoneNumber = await SecureStore.getItemAsync(STORAGE_KEYS.phoneNumber);
 
       if (onboardingSeen !== null) {
         this.onboardingSeen = onboardingSeen === 'true';
       }
-      if (authStatus) {
-        this.authStatus = authStatus as AuthStatus;
-      }
       if (role) {
-        this.role = role as UserRole;
+        // Convert stored string to enum (handle both old lowercase and new uppercase)
+        const normalizedRole = role.toUpperCase() as UserRole;
+        if (Object.values(UserRole).includes(normalizedRole)) {
+          this.role = normalizedRole;
+        }
       }
       if (driverOnboardingComplete !== null) {
         this.driverOnboardingComplete = driverOnboardingComplete === 'true';
       }
       if (userId) {
         this.userId = userId;
+      }
+      if (phoneNumber) {
+        this.phoneNumber = phoneNumber;
+      }
+
+      // Check Firebase auth state to restore session after hot reload
+      const firebaseUser = auth().currentUser;
+      if (firebaseUser && authStatus === 'loggedIn') {
+        // User is still authenticated in Firebase, restore session
+        runInAction(() => {
+          this.authStatus = 'loggedIn';
+          this.userId = firebaseUser.uid;
+        });
+      } else if (authStatus === 'loggedIn' && !firebaseUser) {
+        // Stored state says logged in but Firebase says not - clear it
+        runInAction(() => {
+          this.authStatus = 'loggedOut';
+          this.userId = null;
+        });
+        await this.setAuthStatus('loggedOut');
+        await SecureStore.deleteItemAsync(STORAGE_KEYS.userId);
+      } else if (authStatus) {
+        // Restore auth status (guest or loggedOut)
+        this.authStatus = authStatus as AuthStatus;
       }
     } catch (error) {
       console.error('Failed to hydrate app store:', error);
@@ -148,6 +186,18 @@ export class AppStore {
   }
 
   /**
+   * Set phone number
+   */
+  async setPhoneNumber(phoneNumber: string | null) {
+    this.phoneNumber = phoneNumber;
+    if (phoneNumber) {
+      await SecureStore.setItemAsync(STORAGE_KEYS.phoneNumber, phoneNumber);
+    } else {
+      await SecureStore.deleteItemAsync(STORAGE_KEYS.phoneNumber);
+    }
+  }
+
+  /**
    * Send phone verification code
    */
   async sendPhoneVerificationCode(phoneNumber: string): Promise<void> {
@@ -156,6 +206,9 @@ export class AppStore {
       
       // Firebase phone auth automatically handles reCAPTCHA on native
       const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
+      
+      // Save phone number for future use
+      await this.setPhoneNumber(phoneNumber);
       
       runInAction(() => {
         this._confirmation = confirmation;
@@ -179,7 +232,6 @@ export class AppStore {
 
       this.isAuthLoading = true;
 
-      // Verify the code with Firebase
       const userCredential = await this.confirmation.confirm(code);
       const user = userCredential.user;
       
@@ -187,18 +239,8 @@ export class AppStore {
         throw new Error('Failed to authenticate user');
       }
 
-      // Get Firebase ID token
       const firebaseIdToken = await user.getIdToken(true);
-console.log('firebaseIdToken.......', firebaseIdToken);
-      // Bootstrap user with backend (creates user in DB if new, or returns existing)
-      const bootstrapResponse = await this.authService.bootstrap(firebaseIdToken, role);
-
-      // Store backend token (response structure may vary - adjust based on your API)
-      // The API returns { userId, role } - token is handled by axios interceptor
-      // If your API returns a token in the response, uncomment below:
-      // if (bootstrapResponse?.token || bootstrapResponse?.data?.token) {
-      //   await _setToken(bootstrapResponse.token || bootstrapResponse.data.token);
-      // }
+      await this.authService.initializeUser(firebaseIdToken, role);
 
       // Update store
       runInAction(() => {
@@ -207,7 +249,7 @@ console.log('firebaseIdToken.......', firebaseIdToken);
         this.userId = user.uid;
         this.onboardingSeen = true;
         this._confirmation = null;
-        if (role === 'driver') {
+        if (role === UserRole.DRIVER) {
           this.driverOnboardingComplete = false;
         }
       });
@@ -220,15 +262,14 @@ console.log('firebaseIdToken.......', firebaseIdToken);
         this.setUserId(user.uid),
       ]);
 
-      // Log analytics event
+      //Todo: Log analytics event
       try {
       
       } catch (analyticsError) {
         console.warn('Analytics logging failed:', analyticsError);
       }
 
-      // Navigate based on role
-      if (role === 'driver') {
+      if (role === UserRole.DRIVER) {
         router.replace('/(driver-onboarding)/step-1');
       } else {
         router.replace('/(tabs)/nearby');
@@ -246,7 +287,7 @@ console.log('firebaseIdToken.......', firebaseIdToken);
   async continueAsGuest() {
     await Promise.all([
       this.setAuthStatus('guest'),
-      this.setRole('passenger'),
+      this.setRole(UserRole.PASSENGER),
       this.setOnboardingSeen(true),
     ]);
     router.replace('/(tabs)/nearby');
@@ -258,7 +299,7 @@ console.log('firebaseIdToken.......', firebaseIdToken);
   async mockPassengerLogin() {
     await Promise.all([
       this.setAuthStatus('loggedIn'),
-      this.setRole('passenger'),
+      this.setRole(UserRole.PASSENGER),
       this.setOnboardingSeen(true),
     ]);
     router.replace('/(tabs)/nearby');
@@ -270,7 +311,7 @@ console.log('firebaseIdToken.......', firebaseIdToken);
   async mockDriverLogin() {
     await Promise.all([
       this.setAuthStatus('loggedIn'),
-      this.setRole('driver'),
+      this.setRole(UserRole.DRIVER),
       this.setDriverOnboardingComplete(false),
       this.setOnboardingSeen(true),
     ]);
@@ -291,7 +332,7 @@ console.log('firebaseIdToken.......', firebaseIdToken);
     // Clear store
     runInAction(() => {
       this.authStatus = 'loggedOut';
-      this.role = 'passenger';
+      this.role = UserRole.PASSENGER;
       this.userId = null;
       this._confirmation = null;
       this.driverOnboardingComplete = false;
@@ -308,8 +349,8 @@ console.log('firebaseIdToken.......', firebaseIdToken);
     // Clear backend token
     await _setToken('');
 
-    // Navigate to login
-    router.replace('/(auth)/passenger-login');
+    // Navigate to welcome screen (user can continue as guest or login)
+    router.replace('/(onboarding)/welcome');
   }
 
   /**
