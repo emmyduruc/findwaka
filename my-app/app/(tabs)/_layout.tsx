@@ -57,6 +57,15 @@ const TabsLayout = observer(() => {
         }}
       />
       <Tabs.Screen
+        name="chat-list"
+        options={{
+          title: 'Messages',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="chatbubbles-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
