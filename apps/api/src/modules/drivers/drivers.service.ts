@@ -135,6 +135,9 @@ export class DriversService {
     if (dto.bio !== undefined) {
       user.driverProfile.bio = dto.bio;
     }
+    if (dto.areasOfOperation !== undefined) {
+      user.driverProfile.areasOfOperation = dto.areasOfOperation;
+    }
 
     await this.driverProfileRepository.save(user.driverProfile);
 

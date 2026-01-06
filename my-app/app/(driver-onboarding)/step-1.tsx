@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { observer } from 'mobx-react-lite';
+import { auth } from '@/config/firebase';
+import { useStorage } from '@/stores/root';
+import { useAppStore } from '@/stores/useAppStore';
 import { Button } from '@/ui/Button';
 import { Text } from '@/ui/Text';
 import { Input } from '@/ui/Input';
@@ -19,26 +23,77 @@ export type VehicleType = 'bike' | 'tricycle' | 'car';
  * - Display name
  * - Vehicle type (bike/tricycle/car)
  */
-export default function DriverOnboardingStep1() {
+const DriverOnboardingStep1 = observer(() => {
+  const rootStore = useStorage();
+  const appStore = useAppStore();
   const [displayName, setDisplayName] = useState('');
   const [vehicleType, setVehicleType] = useState<VehicleType | null>(null);
   const [isNameValid, setIsNameValid] = useState(true);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      try {
+        const firebaseUser = auth().currentUser;
+        
+        if (!firebaseUser) {
+          // No Firebase user, redirect to driver login
+          router.replace('/(auth)/driver-login');
+          return;
+        }
+
+        // Verify token exists and is valid
+        try {
+          const token = await firebaseUser.getIdToken(false);
+          if (!token) {
+            // Token not available, redirect to login
+            router.replace('/(auth)/driver-login');
+            return;
+          }
+        } catch (tokenError) {
+          // Token error, redirect to login
+          console.error('Token verification failed:', tokenError);
+          router.replace('/(auth)/driver-login');
+          return;
+        }
+
+        // User is authenticated, show the screen
+        setIsCheckingAuth(false);
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        router.replace('/(auth)/driver-login');
+      }
+    };
+
+    checkAuthentication();
+  }, []);
+
+  if (isCheckingAuth) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text variant="body" color="muted">
+            Loading...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const handleContinue = () => {
     if (!isNameValid || !displayName.trim() || !vehicleType) {
       return;
     }
-    // TODO: Save to store/database
+
+    rootStore.driverOnboarding.setDisplayName(displayName);
+    rootStore.driverOnboarding.setVehicleType(vehicleType);
     
-    // Route based on vehicle type
     if (vehicleType === 'bike') {
-      // Bike goes directly to areas of operation
       router.push({
         pathname: '/(driver-onboarding)/step-3',
         params: { vehicleType: 'bike' },
       });
     } else {
-      // Keke and Car go to vehicle details first
       router.push({
         pathname: '/(driver-onboarding)/step-2',
         params: { vehicleType },
@@ -119,4 +174,6 @@ export default function DriverOnboardingStep1() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
+});
+
+export default DriverOnboardingStep1;

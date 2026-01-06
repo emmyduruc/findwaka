@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useAppStore } from '@/stores/useAppStore';
+import { useStorage } from '@/stores/root';
 import { Button } from '@/ui/Button';
 import { Text } from '@/ui/Text';
 import { Input } from '@/ui/Input';
@@ -11,6 +12,8 @@ import { BackButton } from '@/ui/BackButton';
 import { Icon } from '@/ui/Icon';
 import { colors } from '@/theme/colors';
 import { requiredStringSchema } from '@/utils/validation';
+import { createDriverService } from '@/services/driver';
+import { VehicleType } from '@waka/shared';
 
 /**
  * Driver onboarding step 3: Areas of operation
@@ -21,52 +24,100 @@ import { requiredStringSchema } from '@/utils/validation';
  */
 const DriverOnboardingStep3 = observer(() => {
   const store = useAppStore();
-  const params = useLocalSearchParams<{ vehicleType?: string }>();
+  const rootStore = useStorage();
+  const params = useLocalSearchParams<{ vehicleType?: string; vehicleBrand?: string; vehicleColor?: string; licensePlate?: string }>();
+  const driverService = createDriverService();
 
   const [areas, setAreas] = useState<string[]>(['', '', '']);
   const [areaValidations, setAreaValidations] = useState<boolean[]>([false, false, false]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAreaChange = (index: number, value: string) => {
     const newAreas = [...areas];
     newAreas[index] = value;
     setAreas(newAreas);
+  };
 
-    // Validate this area
-    try {
-      requiredStringSchema.parse(value);
-      const newValidations = [...areaValidations];
-      newValidations[index] = true;
-      setAreaValidations(newValidations);
-    } catch {
-      const newValidations = [...areaValidations];
-      newValidations[index] = false;
-      setAreaValidations(newValidations);
-    }
+  const handleValidationChange = (index: number, isValid: boolean) => {
+    const newValidations = [...areaValidations];
+    newValidations[index] = isValid;
+    setAreaValidations(newValidations);
   };
 
   const handleAddArea = () => {
-    setAreas([...areas, '']);
-    setAreaValidations([...areaValidations, false]);
+    const newAreas = [...areas, ''];
+    const newValidations = [...areaValidations, false];
+    setAreas(newAreas);
+    setAreaValidations(newValidations);
   };
 
   const handleContinue = async () => {
-    // Validate at least one area is entered
     const validAreas = areas.filter((area, index) => area.trim() && areaValidations[index]);
     
     if (validAreas.length === 0) {
       return;
     }
 
-    // TODO: Save areas to store/database
-    
-    // Complete driver onboarding
-    await store.setDriverOnboardingComplete(true);
-    
-    // Route to home (nearby tab)
-    router.replace('/(tabs)/nearby');
+    setIsSubmitting(true);
+
+    try {
+      const vehicleTypeParam = params.vehicleType?.toUpperCase() || 'BIKE';
+      const primaryArea = validAreas[0];
+
+      try {
+        await driverService.createProfile({
+          vehicleType: vehicleTypeParam as VehicleType,
+          communityHome: primaryArea,
+          vehicleBrand: params.vehicleBrand || null,
+          vehicleColor: params.vehicleColor || null,
+          licensePlate: params.licensePlate || null,
+        });
+      } catch (createError: any) {
+        if (createError.response?.status === 400 && createError.response?.data?.message?.includes('already exists')) {
+          await driverService.updateProfile({
+            vehicleType: vehicleTypeParam as VehicleType,
+            communityHome: primaryArea,
+            vehicleBrand: params.vehicleBrand || undefined,
+            vehicleColor: params.vehicleColor || undefined,
+            licensePlate: params.licensePlate || undefined,
+            areasOfOperation: validAreas,
+          });
+        } else {
+          throw createError;
+        }
+      }
+
+      if (validAreas.length > 1) {
+        await driverService.updateProfile({
+          areasOfOperation: validAreas,
+        });
+      }
+
+      await store.setDriverOnboardingComplete(true);
+      
+      router.replace('/(tabs)/drivers');
+    } catch (error: any) {
+      console.error('Error completing driver onboarding:', error);
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || error.message || 'Failed to complete onboarding. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const hasAtLeastOneValidArea = areas.some((area, index) => area.trim() && areaValidations[index]);
+  const hasAtLeastOneValidArea = areas.some((area) => {
+    const trimmed = area.trim();
+    if (!trimmed || trimmed.length === 0) return false;
+    try {
+      requiredStringSchema.parse(trimmed);
+      return true;
+    } catch {
+      return false;
+    }
+  });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
@@ -103,11 +154,7 @@ const DriverOnboardingStep3 = observer(() => {
                       value={area}
                       onChangeText={(value) => handleAreaChange(index, value)}
                       schema={requiredStringSchema}
-                      onValidationChange={(isValid) => {
-                        const newValidations = [...areaValidations];
-                        newValidations[index] = isValid;
-                        setAreaValidations(newValidations);
-                      }}
+                      onValidationChange={(isValid) => handleValidationChange(index, isValid)}
                     />
                   </View>
                   {index >= 2 && index === areas.length - 1 && (
@@ -131,7 +178,7 @@ const DriverOnboardingStep3 = observer(() => {
               variant="primary"
               size="lg"
               fullWidth
-              disabled={!hasAtLeastOneValidArea}
+              disabled={!hasAtLeastOneValidArea || isSubmitting}
             />
           </View>
         </ScrollView>

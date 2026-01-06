@@ -45,6 +45,7 @@ const TabsLayout = observer(() => {
           tabBarIcon: ({ color, size }) => (
             <Icon name="location-outline" size={size} color={color} />
           ),
+          href: store.role === UserRole.DRIVER ? null : undefined,
         }}
       />
       <Tabs.Screen
@@ -54,6 +55,7 @@ const TabsLayout = observer(() => {
           tabBarIcon: ({ color, size }) => (
             <Icon name="car-outline" size={size} color={color} />
           ),
+          href: store.role === UserRole.PASSENGER ? null : undefined,
         }}
       />
       <Tabs.Screen

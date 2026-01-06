@@ -67,13 +67,8 @@ export const Input: React.FC<InputProps> = ({
     setInternalValue(text);
     onChangeText?.(text);
     
-    // Validate on change (but don't show error until blur if field is empty)
-    if (text.length > 0) {
-      validate(text);
-    } else {
-      setInternalError(undefined);
-      onValidationChange?.(true);
-    }
+    // Always validate on change
+    validate(text);
   };
 
   const handleBlur = () => {

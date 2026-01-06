@@ -193,6 +193,8 @@ export class AppStore {
       }
 
       const firebaseIdToken = await user.getIdToken(true);
+      await _setToken(firebaseIdToken);
+      
       await this.authService.initializeUser(firebaseIdToken, role);
 
       runInAction(() => {

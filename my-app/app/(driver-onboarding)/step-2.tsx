@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { observer } from 'mobx-react-lite';
+import { useStorage } from '@/stores/root';
 import { Button } from '@/ui/Button';
 import { Text } from '@/ui/Text';
 import { Input } from '@/ui/Input';
@@ -44,7 +46,8 @@ const VEHICLE_COLORS: VehicleColor[] = [
  * - Color selector
  * - Vehicle type input (car only)
  */
-export default function DriverOnboardingStep2() {
+const DriverOnboardingStep2 = observer(() => {
+  const rootStore = useStorage();
   const params = useLocalSearchParams<{ vehicleType?: string }>();
   const vehicleType = (params.vehicleType as VehicleType) || 'car';
 
@@ -62,10 +65,20 @@ export default function DriverOnboardingStep2() {
       return;
     }
     
-    // TODO: Save to store/database
+    rootStore.driverOnboarding.setLicensePlate(plateNumber);
+    rootStore.driverOnboarding.setVehicleColor(selectedColor);
+    if (vehicleType === 'car') {
+      rootStore.driverOnboarding.setVehicleBrand(vehicleModel);
+    }
+    
     router.push({
       pathname: '/(driver-onboarding)/step-3',
-      params: { vehicleType },
+      params: {
+        vehicleType,
+        vehicleBrand: vehicleType === 'car' ? vehicleModel : undefined,
+        vehicleColor: selectedColor,
+        licensePlate: plateNumber,
+      },
     });
   };
 
@@ -151,4 +164,6 @@ export default function DriverOnboardingStep2() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
+});
+
+export default DriverOnboardingStep2;

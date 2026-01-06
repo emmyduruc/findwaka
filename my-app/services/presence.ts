@@ -5,7 +5,7 @@ export const createPresenceService = () => {
   return {
     setOnline: async (): Promise<void> => {
       try {
-        await axiosInstance.post(DBUtils.presence.setOnline);
+        await axiosInstance.put(DBUtils.presence.setOnline);
       } catch (error: any) {
         console.error('Set online error:', error.response?.data || error.message);
         throw error;
@@ -14,7 +14,7 @@ export const createPresenceService = () => {
 
     setOffline: async (): Promise<void> => {
       try {
-        await axiosInstance.post(DBUtils.presence.setOffline);
+        await axiosInstance.put(DBUtils.presence.setOffline);
       } catch (error: any) {
         console.error('Set offline error:', error.response?.data || error.message);
         throw error;

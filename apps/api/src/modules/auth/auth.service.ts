@@ -73,25 +73,10 @@ export class AuthService {
       });
 
       if (!driverProfile) {
-        driverProfile = this.driverProfileRepository.create({
-          userId: user.id,
-          vehicleType: null as any,
-          communityHome: '',
-          isVerified: false,
-          averageRating: 0,
-          ratingCount: 0,
-        });
-        driverProfile = await this.driverProfileRepository.save(driverProfile);
-
-        const presence = this.driverPresenceRepository.create({
-          driverProfileId: driverProfile.id,
-          isOnline: false,
-          lastSeenAt: new Date(),
-        });
-        await this.driverPresenceRepository.save(presence);
+        response.driverProfileId = null;
+      } else {
+        response.driverProfileId = driverProfile.id;
       }
-
-      response.driverProfileId = driverProfile.id;
     }
 
     return response;

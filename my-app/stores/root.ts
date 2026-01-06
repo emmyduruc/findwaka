@@ -3,6 +3,7 @@ import { createGuiStore, IGuiStore } from "./gui";
 import { createAuthStore, IAuthStore } from "./auth";
 import { createDriverStore, IDriverStore } from "./driver";
 import { createChatStore, IChatStore } from "./chat";
+import { createDriverOnboardingStore, IDriverOnboardingStore } from "./driverOnboarding";
 import { createAuthService } from "@/services/auth";
 import { loggerService } from "@/services/logger";
 
@@ -11,6 +12,7 @@ export interface IRootStore {
     auth: IAuthStore;
     driver: IDriverStore;
     chat: IChatStore;
+    driverOnboarding: IDriverOnboardingStore;
 }
 
 export const createParentStore = (): IRootStore => {
@@ -21,18 +23,21 @@ export const createParentStore = (): IRootStore => {
         gui: {} as IGuiStore,
         driver: {} as IDriverStore,
         chat: {} as IChatStore,
+        driverOnboarding: {} as IDriverOnboardingStore,
     } as IRootStore;
 
     const authStore = createAuthStore(tempStore, loggerService, authService);
     const guiStore = createGuiStore(tempStore, loggerService);
     const driverStore = createDriverStore(tempStore, loggerService);
     const chatStore = createChatStore(tempStore, loggerService);
+    const driverOnboardingStore = createDriverOnboardingStore();
 
     const store: IRootStore = {
         auth: authStore,
         gui: guiStore,
         driver: driverStore,
         chat: chatStore,
+        driverOnboarding: driverOnboardingStore,
     };
 
     driverStore.init();

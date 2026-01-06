@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { auth } from "@/config/firebase";
 
 import { getToken, _setToken } from "@/services/storage";
 
@@ -29,7 +30,23 @@ axiosInstance.interceptors.request.use(
         request.headers.Accept = "application/json";
         request.headers["Content-Type"] = "application/json";
         
-        const token = await getToken();
+        let token = await getToken();
+
+        // If no token in storage, try to get Firebase token directly
+        if (!token) {
+            try {
+                const firebaseUser = auth().currentUser;
+                if (firebaseUser) {
+                    token = await firebaseUser.getIdToken(false);
+                    // Store it for future requests
+                    if (token) {
+                        await _setToken(token);
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to get Firebase token:', error);
+            }
+        }
 
         if (token && !request.headers.Authorization && !request.headers.authorization) {
             request.headers.Authorization = `Bearer ${token}`;

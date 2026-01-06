@@ -7,6 +7,7 @@ export const DBUtils = {
   users: {
     getMe: `/users/me`,
     updateMe: `/users/me`,
+    switchRole: `/users/me/switch-role`,
   },
   drivers: {
     createMe: `/drivers/me`,

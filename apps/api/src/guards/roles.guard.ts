@@ -5,9 +5,9 @@ import {
   ForbiddenException,
   SetMetadata,
 } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import 'reflect-metadata';
 import { UserRole } from '@waka/shared';
 import { FirebaseUser } from './firebase-auth.guard';
 import { User } from '../entities/user.entity';
@@ -19,16 +19,20 @@ export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(
-    private reflector: Reflector,
     @InjectRepository(User)
     private userRepository: Repository<User>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    // Get metadata directly using reflect-metadata
+    const handler = context.getHandler();
+    const controller = context.getClass();
+    
+    // Try to get from handler first, then from controller
+    let requiredRoles = Reflect.getMetadata(ROLES_KEY, handler) as UserRole[] | undefined;
+    if (!requiredRoles) {
+      requiredRoles = Reflect.getMetadata(ROLES_KEY, controller) as UserRole[] | undefined;
+    }
 
     if (!requiredRoles) {
       return true;

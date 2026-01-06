@@ -32,6 +32,15 @@ export interface GetPublicDriversResponse {
   offset: number;
 }
 
+export interface CreateDriverProfileParams {
+  vehicleType: VehicleType;
+  communityHome: string;
+  vehicleBrand?: string;
+  vehicleColor?: string;
+  licensePlate?: string;
+  areasOfOperation?: string[];
+}
+
 export const createDriverService = () => {
   return {
     getPublicDrivers: async (params: GetPublicDriversParams = {}): Promise<GetPublicDriversResponse> => {
@@ -46,9 +55,43 @@ export const createDriverService = () => {
         const response = await axiosInstance.get(
           `${DBUtils.drivers.getPublic}?${queryParams.toString()}`
         );
-        return response;
+        return response as unknown as GetPublicDriversResponse;
       } catch (error: any) {
         console.error('Get public drivers error:', error.response?.data || error.message);
+        throw error;
+      }
+    },
+
+    createProfile: async (params: CreateDriverProfileParams) => {
+      try {
+        const response = await axiosInstance.post(DBUtils.drivers.createMe, {
+          vehicleType: params.vehicleType.toUpperCase(),
+          communityHome: params.communityHome,
+          vehicleBrand: params.vehicleBrand,
+          vehicleColor: params.vehicleColor,
+          licensePlate: params.licensePlate,
+        });
+        return response as unknown as any;
+      } catch (error: any) {
+        console.error('Create driver profile error:', error.response?.data || error.message);
+        throw error;
+      }
+    },
+
+    updateProfile: async (params: Partial<CreateDriverProfileParams> & { areasOfOperation?: string[] }) => {
+      try {
+        const updateData: any = {};
+        if (params.vehicleType) updateData.vehicleType = params.vehicleType.toUpperCase();
+        if (params.communityHome) updateData.communityHome = params.communityHome;
+        if (params.vehicleBrand !== undefined) updateData.vehicleBrand = params.vehicleBrand;
+        if (params.vehicleColor !== undefined) updateData.vehicleColor = params.vehicleColor;
+        if (params.licensePlate !== undefined) updateData.licensePlate = params.licensePlate;
+        if (params.areasOfOperation) updateData.areasOfOperation = params.areasOfOperation;
+
+        const response = await axiosInstance.patch(DBUtils.drivers.updateMe, updateData);
+        return response as unknown as any;
+      } catch (error: any) {
+        console.error('Update driver profile error:', error.response?.data || error.message);
         throw error;
       }
     },

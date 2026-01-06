@@ -27,6 +27,10 @@ const Index = observer(() => {
     return <Redirect href="/(driver-onboarding)/step-1" />;
   }
 
+  if (store.authStatus === 'loggedIn' && store.role === UserRole.DRIVER) {
+    return <Redirect href="/(tabs)/drivers" />;
+  }
+
   return <Redirect href="/(tabs)/nearby" />;
 });
 

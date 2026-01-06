@@ -15,7 +15,10 @@ import { Icon } from '@/ui/Icon';
 import { Avatar } from '@/ui/Avatar';
 import { UserRole } from '@/models/user.model';
 import { ImagePickerModal } from '@/ui/ImagePickerModal';
+import { RoleSwitchModal } from '@/ui/RoleSwitchModal';
 import { colors } from '@/theme/colors';
+import { auth } from '@/config/firebase';
+import { createAuthService } from '@/services/auth';
 
 /**
  * Profile screen
@@ -33,6 +36,9 @@ const ProfileScreen = observer(() => {
   const rootStore = useStorage();
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [roleSwitchModalVisible, setRoleSwitchModalVisible] = useState(false);
+  const [pendingRole, setPendingRole] = useState<UserRole | null>(null);
+  const [isSwitchingRole, setIsSwitchingRole] = useState(false);
 
   // Mock profile stats (TODO: Replace with real data from store/backend)
   const profileStats = {
@@ -110,15 +116,110 @@ const ProfileScreen = observer(() => {
   };
 
   const handleSwitchToPassenger = async () => {
-    await store.setRole(UserRole.PASSENGER);
     if (store.authStatus === 'loggedOut') {
+      await store.setRole(UserRole.PASSENGER);
       await store.continueAsGuest();
+      router.replace('/(tabs)/nearby');
+      return;
     }
-    router.replace('/(tabs)/nearby');
+
+    if (store.role === UserRole.DRIVER) {
+      setPendingRole(UserRole.PASSENGER);
+      setRoleSwitchModalVisible(true);
+    }
   };
 
-  const handleSwitchToDriver = () => {
-    router.push('/(auth)/driver-login');
+  const handleSwitchToDriver = async () => {
+    if (store.authStatus === 'loggedOut') {
+      router.push('/(auth)/driver-login');
+      return;
+    }
+
+    if (store.role === UserRole.PASSENGER) {
+      if (store.authStatus === 'loggedIn') {
+        setPendingRole(UserRole.DRIVER);
+        setRoleSwitchModalVisible(true);
+      } else {
+        router.push('/(auth)/driver-login');
+      }
+    }
+  };
+
+  const handleConfirmRoleSwitch = async () => {
+    if (!pendingRole || store.authStatus !== 'loggedIn') {
+      setRoleSwitchModalVisible(false);
+      setPendingRole(null);
+      return;
+    }
+
+    setIsSwitchingRole(true);
+    setRoleSwitchModalVisible(false);
+
+    try {
+      const user = auth().currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const firebaseIdToken = await user.getIdToken(true);
+      
+      // Store the token for axios interceptor
+      const { _setToken } = await import('@/services/storage');
+      await _setToken(firebaseIdToken);
+      
+      const authService = createAuthService();
+      
+      if (pendingRole === UserRole.DRIVER) {
+        await authService.switchRole(UserRole.DRIVER, firebaseIdToken);
+        await store.setRole(UserRole.DRIVER);
+        
+        if (!store.driverOnboardingComplete) {
+          router.replace('/(driver-onboarding)/step-1');
+        } else {
+          router.replace('/(tabs)/drivers');
+        }
+      } else {
+        await authService.switchRole(UserRole.PASSENGER, firebaseIdToken);
+        await store.setRole(UserRole.PASSENGER);
+        router.replace('/(tabs)/nearby');
+      }
+    } catch (error: any) {
+      console.error('Error switching role:', error);
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || error.message || 'Failed to switch role. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSwitchingRole(false);
+      setPendingRole(null);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const user = auth().currentUser;
+              if (user) {
+                await user.delete();
+                await store.logout();
+              }
+            } catch (error: any) {
+              console.error('Error deleting account:', error);
+              Alert.alert('Error', 'Failed to delete account. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleLogout = async () => {
@@ -263,28 +364,43 @@ const ProfileScreen = observer(() => {
 
         {/* Actions */}
         <View style={{ gap: 16, marginBottom: 24 }}>
-          <Button
-            label="Switch to passenger"
-            onPress={handleSwitchToPassenger}
-            variant="outline"
-            size="lg"
-            fullWidth
-          />
-          <Button
-            label="Switch to driver"
-            onPress={handleSwitchToDriver}
-            variant="outline"
-            size="lg"
-            fullWidth
-          />
-          {store.authStatus !== 'loggedOut' && (
+          {store.role === UserRole.DRIVER && (
             <Button
-              label="Log out"
-              onPress={handleLogout}
-              variant="ghost"
+              label="Switch to passenger"
+              onPress={handleSwitchToPassenger}
+              variant="outline"
               size="lg"
               fullWidth
+              disabled={isSwitchingRole}
             />
+          )}
+          {store.role === UserRole.PASSENGER && (
+            <Button
+              label="Switch to driver"
+              onPress={handleSwitchToDriver}
+              variant="outline"
+              size="lg"
+              fullWidth
+              disabled={isSwitchingRole}
+            />
+          )}
+          {store.authStatus !== 'loggedOut' && (
+            <>
+              <Button
+                label="Log out"
+                onPress={handleLogout}
+                variant="ghost"
+                size="lg"
+                fullWidth
+              />
+              <Button
+                label="Delete account"
+                onPress={handleDeleteAccount}
+                variant="outline"
+                size="lg"
+                fullWidth
+              />
+            </>
           )}
         </View>
       </ScrollView>
@@ -295,6 +411,18 @@ const ProfileScreen = observer(() => {
         onClose={handleCloseImagePicker}
         onCamera={handleCamera}
         onGallery={handleGallery}
+      />
+
+      {/* Role Switch Modal */}
+      <RoleSwitchModal
+        visible={roleSwitchModalVisible}
+        onClose={() => {
+          setRoleSwitchModalVisible(false);
+          setPendingRole(null);
+        }}
+        onConfirm={handleConfirmRoleSwitch}
+        fromRole={store.role === UserRole.DRIVER ? 'driver' : 'passenger'}
+        toRole={pendingRole === UserRole.DRIVER ? 'driver' : 'passenger'}
       />
     </SafeAreaView>
   );

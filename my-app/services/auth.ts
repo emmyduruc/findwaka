@@ -28,6 +28,25 @@ export const createAuthService = () => {
         throw error;
       }
     },
+
+    switchRole: async (role: UserRole, firebaseIdToken: string) => {
+      try {
+        const roleValue = String(role).toUpperCase();
+        const response = await axiosInstance.post(
+          DBUtils.users.switchRole,
+          { role: roleValue },
+          {
+            headers: {
+              Authorization: `Bearer ${firebaseIdToken}`,
+            },
+          }
+        );
+        return response;
+      } catch (error: any) {
+        console.error('Switch role error:', error.response?.data || error.message);
+        throw error;
+      }
+    },
   };
 };
 

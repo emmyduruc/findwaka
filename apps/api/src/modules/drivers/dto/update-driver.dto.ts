@@ -32,5 +32,9 @@ export class UpdateDriverDto {
   @IsOptional()
   @IsString()
   bio?: string;
+
+  @ApiProperty({ required: false, type: [String] })
+  @IsOptional()
+  areasOfOperation?: string[];
 }
 
