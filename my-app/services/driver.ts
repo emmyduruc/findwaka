@@ -5,6 +5,7 @@ import { VehicleType } from "@waka/shared";
 export interface PublicDriver {
   id: string;
   displayName: string;
+  photoUrl: string | null;
   vehicleType: VehicleType;
   vehicleBrand: string | null;
   vehicleColor: string | null;

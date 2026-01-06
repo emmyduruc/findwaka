@@ -15,7 +15,7 @@ export const Card: React.FC<CardProps> = ({ children, className = '', onPress, s
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 20,
+    padding: 16,
   };
 
   if (onPress) {

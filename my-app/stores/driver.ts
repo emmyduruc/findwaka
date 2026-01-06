@@ -19,6 +19,7 @@ export interface FormattedDriver {
     vehicleBrand: string | null;
     vehicleColor: string | null;
     isOnline: boolean;
+    photoUrl: string | null;
 }
 
 const formatTimeAgo = (date: Date): string => {
@@ -81,6 +82,7 @@ export const createDriverStore = (
                 vehicleBrand: driver.vehicleBrand,
                 vehicleColor: driver.vehicleColor,
                 isOnline: driver.isOnline,
+                photoUrl: driver.photoUrl || null,
             }));
         },
 

@@ -49,6 +49,9 @@ export class PublicDriverResponseDto {
   @ApiProperty()
   displayName: string;
 
+  @ApiProperty({ required: false })
+  photoUrl: string | null;
+
   @ApiProperty({ enum: VehicleType })
   vehicleType: VehicleType;
 

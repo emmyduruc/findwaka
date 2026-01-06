@@ -3,14 +3,17 @@ import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { observer } from 'mobx-react-lite';
+import { Image } from 'expo-image';
 import { useAppStore } from '@/stores/useAppStore';
 import { useStorage } from '@/stores/root';
 import { Text } from '@/ui/Text';
 import { Card } from '@/ui/Card';
 import { Chip } from '@/ui/Chip';
 import { Icon } from '@/ui/Icon';
+import { Avatar } from '@/ui/Avatar';
 import { DriverDetailSheet, DriverDetail } from '@/ui/DriverDetailSheet';
 import { colors } from '@/theme/colors';
+import { VehicleType } from '@waka/shared';
 
 const NearbyScreen = observer(() => {
   const store = useAppStore();
@@ -204,90 +207,153 @@ const NearbyScreen = observer(() => {
         )}
 
         {!rootStore.driver.isLoading && !rootStore.driver.error && (
-          <View style={{ gap: 16 }}>
-            {rootStore.driver.filteredDrivers.map((driver) => (
-              <TouchableOpacity
-                key={driver.id}
-                onPress={() => handleDriverPress(driver)}
-                activeOpacity={0.7}
-              >
-                <Card>
-                  <View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-                      <View style={{ flex: 1 }}>
-                        <Text variant="h3" weight="600" style={{ marginBottom: 4 }}>
+          <View style={{ gap: 12 }}>
+            {rootStore.driver.filteredDrivers.map((driver) => {
+              const getVehicleImage = () => {
+                switch (driver.vehicleType) {
+                  case VehicleType.BIKE:
+                    return require('@/assets/images/okada.png');
+                  case VehicleType.TRICYCLE:
+                    return require('@/assets/images/keke.png');
+                  case VehicleType.CAR:
+                    return require('@/assets/images/car.png');
+                  default:
+                    return require('@/assets/images/okada.png');
+                }
+              };
+
+              const avatarSource = driver.photoUrl
+                ? { uri: driver.photoUrl }
+                : require('@/assets/images/avatar.png');
+
+              return (
+                <TouchableOpacity
+                  key={driver.id}
+                  onPress={() => handleDriverPress(driver)}
+                  activeOpacity={0.7}
+                >
+                  <Card>
+                    <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text variant="h3" weight="600" style={{ marginBottom: 4 }} numberOfLines={1}>
                           {driver.name}
                         </Text>
                         <Text variant="caption" color="muted" style={{ marginBottom: 8 }}>
                           {driver.vehicle}
                         </Text>
-                        <View style={{ flexDirection: 'row', gap: 16 }}>
+                        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Icon name="location" size={14} color={colors.textMuted} />
+                            <Icon name="location" size={12} color={colors.textMuted} />
                             <Text variant="caption" color="muted">
                               {driver.distance}
                             </Text>
                           </View>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Icon name="time-outline" size={14} color={colors.textMuted} />
+                            <Icon name="time-outline" size={12} color={colors.textMuted} />
                             <Text variant="caption" color="muted">
-                              Last seen {driver.lastSeen}
+                              {driver.lastSeen}
                             </Text>
                           </View>
                         </View>
+
+                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                          <TouchableOpacity
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleCall(driver.id);
+                            }}
+                            style={{
+                              flex: 1,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: colors.accentPrimary,
+                              paddingVertical: 11,
+                              borderRadius: 10,
+                              gap: 6,
+                            }}
+                            activeOpacity={0.8}
+                          >
+                            <Icon name="call" size={16} color={colors.background} />
+                            <Text variant="body" weight="600" style={{ color: colors.background, fontSize: 14 }}>
+                              Call
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleWhatsApp(driver.id);
+                            }}
+                            style={{
+                              flex: 1,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: colors.surface,
+                              borderWidth: 1.5,
+                              borderColor: colors.border,
+                              paddingVertical: 11,
+                              borderRadius: 10,
+                              gap: 6,
+                            }}
+                            activeOpacity={0.8}
+                          >
+                            <Icon name="logo-whatsapp" size={16} color={colors.accentPrimary} />
+                            <Text variant="body" weight="600" style={{ fontSize: 14 }}>
+                              WhatsApp
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View className='rounded-full overflow-hidden bg-white border border-border'>
+                         <Image
+                            source={getVehicleImage()}
+                            style={{ width: 58, height: 58 }}
+                            contentFit="cover"
+                          />
+                        {driver.isOnline && (
+                          <View
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              right: 0,
+                              width: 14,
+                              height: 14,
+                              borderRadius: 7,
+                              backgroundColor: '#10B981',
+                              borderWidth: 2.5,
+                              borderColor: colors.surface,
+                            }}
+                          />
+                        )}
+                        {/* <View
+                          style={{
+                            position: 'absolute',
+                            bottom: -2,
+                            right: -2,
+                            width: 32,
+                            height: 32,
+                            borderRadius: 8,
+                            backgroundColor: colors.background,
+                            borderWidth: 2,
+                            borderColor: colors.surface,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Image
+                            source={getVehicleImage()}
+                            style={{ width: 24, height: 24 }}
+                            contentFit="contain"
+                          />
+                        </View> */}
                       </View>
                     </View>
-
-                    <View style={{ flexDirection: 'row', gap: 12 }}>
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleCall(driver.id);
-                        }}
-                        style={{
-                          flex: 1,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: colors.accentPrimary,
-                          paddingVertical: 12,
-                          borderRadius: 12,
-                          gap: 8,
-                        }}
-                      >
-                        <Icon name="call" size={18} color={colors.background} />
-                        <Text variant="body" weight="500" style={{ color: colors.background }}>
-                          Call
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleWhatsApp(driver.id);
-                        }}
-                        style={{
-                          flex: 1,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: colors.surface,
-                          borderWidth: 1.5,
-                          borderColor: colors.border,
-                          paddingVertical: 12,
-                          borderRadius: 12,
-                          gap: 8,
-                        }}
-                      >
-                        <Icon name="logo-whatsapp" size={18} color={colors.accentPrimary} />
-                        <Text variant="body" weight="500">
-                          WhatsApp
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            ))}
+                  </Card>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </ScrollView>

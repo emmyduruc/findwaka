@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, Image, ImageSourcePropType } from 'react-native';
+import { View, Text, ImageSourcePropType } from 'react-native';
+import { Image } from 'expo-image';
 import { colors } from '../theme/colors';
 
 interface AvatarProps {
-  source?: ImageSourcePropType;
+  source?: ImageSourcePropType | { uri: string };
   name?: string;
   size?: number;
   className?: string;
@@ -19,7 +20,7 @@ export const Avatar: React.FC<AvatarProps> = ({ source, name, size = 48, classNa
 
   return (
     <View
-      className={`rounded-full items-center justify-center ${className}`}
+      className={`rounded-full items-center justify-center overflow-hidden ${className}`}
       style={{
         width: size,
         height: size,
@@ -29,9 +30,8 @@ export const Avatar: React.FC<AvatarProps> = ({ source, name, size = 48, classNa
       {source ? (
         <Image
           source={source}
-          className="rounded-full"
           style={{ width: size, height: size }}
-          resizeMode="cover"
+          contentFit="cover"
         />
       ) : (
         <Text
