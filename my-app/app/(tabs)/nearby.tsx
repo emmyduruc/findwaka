@@ -222,9 +222,7 @@ const NearbyScreen = observer(() => {
                 }
               };
 
-              const avatarSource = driver.photoUrl
-                ? { uri: driver.photoUrl }
-                : require('@/assets/images/avatar.png');
+             
 
               return (
                 <TouchableOpacity

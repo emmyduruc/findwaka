@@ -10,15 +10,16 @@ import { useStorage } from '@/stores/root';
 import { Button } from '@/ui/Button';
 import { Text } from '@/ui/Text';
 import { Card } from '@/ui/Card';
-import { ListRow } from '@/ui/ListRow';
 import { Icon } from '@/ui/Icon';
-import { Avatar } from '@/ui/Avatar';
 import { UserRole } from '@/models/user.model';
 import { ImagePickerModal } from '@/ui/ImagePickerModal';
 import { RoleSwitchModal } from '@/ui/RoleSwitchModal';
 import { colors } from '@/theme/colors';
 import { auth } from '@/config/firebase';
 import { createAuthService } from '@/services/auth';
+
+const avatarSource = require('@/assets/images/avatar.png');
+
 
 /**
  * Profile screen
@@ -39,6 +40,7 @@ const ProfileScreen = observer(() => {
   const [roleSwitchModalVisible, setRoleSwitchModalVisible] = useState(false);
   const [pendingRole, setPendingRole] = useState<UserRole | null>(null);
   const [isSwitchingRole, setIsSwitchingRole] = useState(false);
+
 
   // Mock profile stats (TODO: Replace with real data from store/backend)
   const profileStats = {
@@ -252,9 +254,9 @@ const ProfileScreen = observer(() => {
                   borderColor: colors.accentPrimary,
                 }}
               >
-                <Image
-                  source={{ uri: profileImage }}
-                  style={{ width: 120, height: 120 }}
+                 <Image
+                  source={profileImage ? { uri: profileImage } : avatarSource}
+                  style={{ width: 100, height: 100, borderRadius: 100 }}
                   contentFit="cover"
                 />
               </View>
@@ -269,7 +271,12 @@ const ProfileScreen = observer(() => {
                   borderColor: colors.accentPrimary,
                 }}
               >
-                <Icon name="person" size={48} color={colors.background} />
+                 <Image
+                  source={profileImage ? { uri: profileImage } : avatarSource}
+                  style={{ width: 100, height: 100, borderRadius: 100 }}
+                  contentFit="cover"
+                />
+                {/* <Icon name="person" size={48} color={colors.background} /> */}
               </View>
             )}
             <View
