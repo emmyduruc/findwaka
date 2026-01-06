@@ -68,7 +68,51 @@ export class UsersService {
     if (dto.photoUrl !== undefined) {
       user.photoUrl = dto.photoUrl;
     }
+    if (dto.pushNotificationToken !== undefined) {
+      user.pushNotificationToken = dto.pushNotificationToken;
+    }
 
+    await this.userRepository.save(user);
+
+    return this.getMe(firebaseUser);
+  }
+
+  async updateFCMToken(
+    firebaseUser: FirebaseUser,
+    token: string,
+  ): Promise<UserResponseDto> {
+    if (!firebaseUser.localUserId) {
+      throw new NotFoundException('User not bootstrapped');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: firebaseUser.localUserId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.pushNotificationToken = token;
+    await this.userRepository.save(user);
+
+    return this.getMe(firebaseUser);
+  }
+
+  async clearFCMToken(firebaseUser: FirebaseUser): Promise<UserResponseDto> {
+    if (!firebaseUser.localUserId) {
+      throw new NotFoundException('User not bootstrapped');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: firebaseUser.localUserId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.pushNotificationToken = null;
     await this.userRepository.save(user);
 
     return this.getMe(firebaseUser);

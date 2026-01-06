@@ -8,7 +8,7 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, Inject } from '@nestjs/common';
+import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChatService } from './chat.service';
@@ -36,11 +36,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private userSockets = new Map<string, string>();
 
   constructor(
-    private chatService: ChatService,
-    private presenceService: PresenceService,
+    @Inject(forwardRef(() => ChatService))
+    private readonly chatService: ChatService,
+    @Inject(forwardRef(() => PresenceService))
+    private readonly presenceService: PresenceService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) {}
+  ) {
+    if (!this.presenceService) {
+      this.logger.error('PresenceService failed to inject in constructor');
+    } else {
+      this.logger.log('PresenceService successfully injected');
+    }
+  }
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
@@ -130,6 +138,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
+      if (!this.presenceService) {
+        this.logger.error('PresenceService is not available');
+        return { error: 'PresenceService not available' };
+      }
+      
       const firebaseUser = {
         firebaseUid: client.firebaseUid!,
         localUserId: client.userId,

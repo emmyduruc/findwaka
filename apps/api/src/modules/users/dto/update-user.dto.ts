@@ -11,6 +11,17 @@ export class UpdateUserDto {
   @IsOptional()
   @IsUrl()
   photoUrl?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  pushNotificationToken?: string;
+}
+
+export class UpdateFCMTokenDto {
+  @ApiProperty()
+  @IsString()
+  token: string;
 }
 
 export class UserResponseDto {

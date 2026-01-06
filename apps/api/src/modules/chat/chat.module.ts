@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
@@ -13,7 +13,7 @@ import { PresenceModule } from '../presence/presence.module';
   imports: [
     TypeOrmModule.forFeature([Conversation, Message, User]),
     PushNotificationsModule,
-    PresenceModule,
+    forwardRef(() => PresenceModule),
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],

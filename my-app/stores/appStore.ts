@@ -5,6 +5,9 @@ import { auth } from '@/config/firebase';
 import { createAuthService } from '@/services/auth';
 import { _setToken } from '@/services/storage';
 import { UserRole, AuthStatus } from '@/models/user.model';
+import { getFCMToken, clearFCMToken } from '@/services/notifications';
+import axiosInstance from '@/utils/fetch';
+import { DBUtils } from '@/utils/db';
 
 const STORAGE_KEYS = {
   onboardingSeen: 'onboardingSeen',
@@ -215,6 +218,8 @@ export class AppStore {
         this.setUserId(user.uid),
       ]);
 
+      await this.updateFCMTokenIfNeeded();
+
       try {
       
       } catch (analyticsError) {
@@ -262,6 +267,13 @@ export class AppStore {
   }
 
   async logout() {
+    // Clear FCM token before logout
+    try {
+      await this.clearFCMToken();
+    } catch (error) {
+      console.error('Error clearing FCM token on logout:', error);
+    }
+
     try {
       await auth().signOut();
     } catch (error) {
@@ -286,6 +298,42 @@ export class AppStore {
     await _setToken('');
 
     router.replace('/(onboarding)/welcome');
+  }
+
+  async updateFCMTokenIfNeeded(): Promise<void> {
+    try {
+      // Check if user already has FCM token in database
+      const userResponse = await axiosInstance.get(DBUtils.users.getMe);
+      if (userResponse?.pushNotificationToken) {
+        // User already has a token, skip
+        return;
+      }
+
+      // Get new FCM token
+      const fcmToken = await getFCMToken();
+      if (!fcmToken) {
+        console.warn('Failed to get FCM token');
+        return;
+      }
+
+      // Update token in database
+      await axiosInstance.post(DBUtils.users.updateFCMToken, { token: fcmToken });
+      console.log('FCM token updated successfully');
+    } catch (error: any) {
+      console.error('Error updating FCM token:', error.response?.data || error.message);
+      // Don't throw - FCM token update is not critical
+    }
+  }
+
+  async clearFCMToken(): Promise<void> {
+    try {
+      await axiosInstance.post(DBUtils.users.clearFCMToken);
+      await clearFCMToken();
+      console.log('FCM token cleared successfully');
+    } catch (error: any) {
+      console.error('Error clearing FCM token:', error.response?.data || error.message);
+      // Don't throw - FCM token clearing is not critical
+    }
   }
 
   async resetOnboarding() {

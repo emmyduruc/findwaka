@@ -207,6 +207,8 @@ const ProfileScreen = observer(() => {
           style: 'destructive',
           onPress: async () => {
             try {
+              await store.clearFCMToken();
+              
               const user = auth().currentUser;
               if (user) {
                 await user.delete();
@@ -214,7 +216,6 @@ const ProfileScreen = observer(() => {
               }
             } catch (error: any) {
               console.error('Error deleting account:', error);
-              Alert.alert('Error', 'Failed to delete account. Please try again.');
             }
           },
         },

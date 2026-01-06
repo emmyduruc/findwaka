@@ -8,6 +8,8 @@ export const DBUtils = {
     getMe: `/users/me`,
     updateMe: `/users/me`,
     switchRole: `/users/me/switch-role`,
+    updateFCMToken: `/users/me/fcm-token`,
+    clearFCMToken: `/users/me/fcm-token/clear`,
   },
   drivers: {
     createMe: `/drivers/me`,
