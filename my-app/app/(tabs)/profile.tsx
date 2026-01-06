@@ -256,7 +256,7 @@ const ProfileScreen = observer(() => {
               >
                  <Image
                   source={profileImage ? { uri: profileImage } : avatarSource}
-                  style={{ width: 100, height: 100, borderRadius: 100 }}
+                  style={{ width: 120, height: 120, borderRadius: 120 }}
                   contentFit="cover"
                 />
               </View>
@@ -273,7 +273,7 @@ const ProfileScreen = observer(() => {
               >
                  <Image
                   source={profileImage ? { uri: profileImage } : avatarSource}
-                  style={{ width: 100, height: 100, borderRadius: 100 }}
+                  style={{ width: 120, height: 120, borderRadius: 120 }}
                   contentFit="cover"
                 />
                 {/* <Icon name="person" size={48} color={colors.background} /> */}
