@@ -5,7 +5,7 @@ import { auth } from '@/config/firebase';
 import { createAuthService } from '@/services/auth';
 import { _setToken } from '@/services/storage';
 import { UserRole, AuthStatus } from '@/models/user.model';
-import { getFCMToken, clearFCMToken } from '@/services/notifications';
+import messaging from '@react-native-firebase/messaging';
 import axiosInstance from '@/utils/fetch';
 import { DBUtils } from '@/utils/db';
 
@@ -28,6 +28,7 @@ export class AppStore {
   isAuthLoading: boolean = false;
   isHydrated: boolean = false;
   private _confirmation: any = null;
+  private notificationService: any = null; // Will be set from root store
   
   get confirmation() {
     return this._confirmation;
@@ -35,6 +36,10 @@ export class AppStore {
   
   set confirmation(value: any) {
     this._confirmation = value;
+  }
+
+  setNotificationService(service: any) {
+    this.notificationService = service;
   }
 
   private authService = createAuthService();
@@ -300,39 +305,46 @@ export class AppStore {
     router.replace('/(onboarding)/welcome');
   }
 
-  async updateFCMTokenIfNeeded(): Promise<void> {
+  async updateFCMToken(token?: string): Promise<void> {
     try {
-      // Check if user already has FCM token in database
-      const userResponse = await axiosInstance.get(DBUtils.users.getMe);
-      if (userResponse?.pushNotificationToken) {
-        // User already has a token, skip
-        return;
-      }
-
-      // Get new FCM token
-      const fcmToken = await getFCMToken();
+      const fcmToken = token || (this.notificationService ? await this.notificationService.getFcmToken() : null);
       if (!fcmToken) {
         console.warn('Failed to get FCM token');
         return;
       }
 
-      // Update token in database
       await axiosInstance.post(DBUtils.users.updateFCMToken, { token: fcmToken });
       console.log('FCM token updated successfully');
     } catch (error: any) {
       console.error('Error updating FCM token:', error.response?.data || error.message);
-      // Don't throw - FCM token update is not critical
+    }
+  }
+
+  async updateFCMTokenIfNeeded(): Promise<void> {
+    try {
+      const userResponse = await axiosInstance.get(DBUtils.users.getMe) as any;
+      if (userResponse?.pushNotificationToken) {
+        return;
+      }
+
+      await this.updateFCMToken();
+    } catch (error: any) {
+      console.error('Error updating FCM token:', error.response?.data || error.message);
     }
   }
 
   async clearFCMToken(): Promise<void> {
     try {
       await axiosInstance.post(DBUtils.users.clearFCMToken);
-      await clearFCMToken();
+      if (this.notificationService) {
+
+        if (messaging().isDeviceRegisteredForRemoteMessages) {
+          await messaging().unregisterDeviceForRemoteMessages();
+        }
+      }
       console.log('FCM token cleared successfully');
     } catch (error: any) {
       console.error('Error clearing FCM token:', error.response?.data || error.message);
-      // Don't throw - FCM token clearing is not critical
     }
   }
 

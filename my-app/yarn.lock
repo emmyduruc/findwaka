@@ -2102,6 +2102,11 @@
   dependencies:
     plist "^3.1.0"
 
+"@react-native-firebase/messaging@^23.7.0":
+  version "23.7.0"
+  resolved "https://registry.yarnpkg.com/@react-native-firebase/messaging/-/messaging-23.7.0.tgz#fd5eafbe728cf81015acf1ac4b676e2ab411884a"
+  integrity sha512-MFrV2WMnKzsmfkFNY8XLqBlV0FS1VCJC1HAMbXEBjJblVlVLOM+kap08SyHh1qqoXdfaf0mtzGQtpya/kHaAqg==
+
 "@react-native-firebase/remote-config@^23.7.0":
   version "23.7.0"
   resolved "https://registry.yarnpkg.com/@react-native-firebase/remote-config/-/remote-config-23.7.0.tgz#ec3ef9c0a0c59c3b561e8676f5246b34a78f6c9d"

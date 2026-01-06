@@ -3,10 +3,12 @@ import { createChatService, ConversationListItem, Conversation, Message } from '
 import { createWebSocketService } from '@/services/websocket';
 import { IRootStore } from './root';
 import { ILoggerService } from '@/services/logger';
+import { INotificationService } from '@/services/notifications';
 
 export const createChatStore = (
     root: IRootStore,
     logger: ILoggerService,
+    notificationService: INotificationService,
 ) => {
     const chatService = createChatService();
     const websocketService = createWebSocketService();

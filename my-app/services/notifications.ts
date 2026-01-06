@@ -1,77 +1,159 @@
+import messaging from '@react-native-firebase/messaging';
 import * as Notifications from 'expo-notifications';
+import { ILoggerService } from './logger';
+import { IRootStore } from '../stores/root';
 
-/**
- * Configure notification handler
- */
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
+    shouldShowAlert: true,
     shouldSetBadge: true,
     shouldShowBanner: true,
     shouldShowList: true,
   }),
 });
 
-/**
- * Request notification permissions and get FCM token
- */
-export const requestNotificationPermissions = async (): Promise<boolean> => {
-  try {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
+export const createNotificationService = (
+  root: IRootStore,
+  logger: ILoggerService,
+) => {
+  return {
+    onNotificationChangeListener: async (handleNotification: (message: any) => void) => {
+      const notificationInstance = messaging();
 
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
+      if (!notificationInstance.isDeviceRegisteredForRemoteMessages) {
+        await notificationInstance.registerDeviceForRemoteMessages();
+      }
 
-    if (finalStatus !== 'granted') {
-      console.warn('Notification permissions not granted');
-      return false;
-    }
+      const unsubscribeForeground = notificationInstance.onMessage(async (remoteMessage) => {
+        logger.log('Notification Foreground:', logger.templateMessages.SERVICE);
+        console.log('Notification Foreground:', remoteMessage);
 
-    return true;
-  } catch (error) {
-    console.error('Error requesting notification permissions:', error);
-    return false;
-  }
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: remoteMessage.notification?.title || 'New Notification',
+            body: remoteMessage.notification?.body || '',
+            data: remoteMessage.data,
+            sound: 'default',
+            priority: Notifications.AndroidNotificationPriority.MAX,
+          },
+          trigger: null,
+        });
+
+        const eventType = remoteMessage.data?.$event as string | undefined;
+        if (eventType === 'MESSAGE') {
+          handleNotification(remoteMessage);
+          return;
+        }
+
+        if (eventType && (eventType.startsWith('RIDE') || eventType.startsWith('BOOKING'))) {
+          handleNotification(remoteMessage);
+        }
+      });
+
+      const unsubscribeBackground = notificationInstance.onNotificationOpenedApp((remoteMessage) => {
+        logger.log('Notification Opened App:', logger.templateMessages.SERVICE);
+        console.log('Notification Opened App:', remoteMessage);
+        handleNotification(remoteMessage);
+      });
+
+      messaging()
+        .getInitialNotification()
+        .then((remoteMessage) => {
+          if (remoteMessage) {
+            logger.log('Notification from Quit State:', logger.templateMessages.SERVICE);
+            console.log('Notification from Quit State:', remoteMessage);
+            handleNotification(remoteMessage);
+          }
+        });
+
+      notificationInstance.onTokenRefresh(async (token) => {
+        logger.log('FCM token refreshed', logger.templateMessages.SERVICE);
+        try {
+          await root.app.updateFCMToken(token);
+        } catch (error) {
+          logger.error(`Failed to update FCM token on refresh: ${error}`, logger.templateMessages.ERROR);
+        }
+      });
+
+      logger.log('Notification handler registered!', logger.templateMessages.SERVICE);
+      console.log('======> Notification handler registered! <=======');
+
+      return () => {
+        unsubscribeForeground();
+        unsubscribeBackground();
+        if (notificationInstance.isDeviceRegisteredForRemoteMessages) {
+          notificationInstance
+            .unregisterDeviceForRemoteMessages()
+            .then(() => {
+              logger.log('Device unregistered for remote messages', logger.templateMessages.SERVICE);
+            });
+        }
+        logger.log('Notification handler un-registered!', logger.templateMessages.SERVICE);
+        console.log('======> Notification handler un-registered! <=======');
+      };
+    },
+
+    getFcmToken: async (): Promise<string | null> => {
+      try {
+        return await messaging().getToken();
+      } catch (error) {
+        logger.error(`Failed to get FCM token: ${error}`, logger.templateMessages.ERROR);
+        return null;
+      }
+    },
+
+    requestUserPermission: async (): Promise<boolean> => {
+      try {
+        const authStatus = await messaging().requestPermission();
+        return (
+          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+          authStatus === messaging.AuthorizationStatus.PROVISIONAL
+        );
+      } catch (error) {
+        logger.error(`Failed to request notification permission: ${error}`, logger.templateMessages.ERROR);
+        return false;
+      }
+    },
+
+    registerDeviceForRemoteMessages: async (): Promise<void> => {
+      try {
+        if (!messaging().isDeviceRegisteredForRemoteMessages) {
+          await messaging().registerDeviceForRemoteMessages();
+        }
+      } catch (error) {
+        logger.error(`Failed to register device: ${error}`, logger.templateMessages.ERROR);
+      }
+    },
+
+    showCallNotification: (username: string | undefined | null) => {
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: `📞 Incoming Call${username ? ' from ' + username : ''}`,
+          sound: 'default',
+          priority: Notifications.AndroidNotificationPriority.MAX,
+        },
+        trigger: null,
+      }).catch((error) => {
+        logger.error(`Failed to show call notification: ${error}`, logger.templateMessages.ERROR);
+      });
+    },
+
+    showNotificationWithSound: (title: string, body: string, soundFile?: string) => {
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          sound: soundFile || true,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+        },
+        trigger: null,
+      }).catch((error) => {
+        logger.error(`Failed to show notification: ${error}`, logger.templateMessages.ERROR);
+      });
+    },
+  };
 };
 
-/**
- * Get FCM/Expo push token
- */
-export const getFCMToken = async (): Promise<string | null> => {
-  try {
-    const hasPermission = await requestNotificationPermissions();
-    if (!hasPermission) {
-      return null;
-    }
-
-    // Get project ID from expo-constants or use default
-    const projectId = process.env.EXPO_PUBLIC_PROJECT_ID || 'findwaka-90f8b';
-    
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
-
-    return tokenData.data;
-  } catch (error) {
-    console.error('Error getting FCM token:', error);
-    return null;
-  }
-};
-
-/**
- * Clear/delete FCM token (unregister)
- */
-export const clearFCMToken = async (): Promise<void> => {
-  try {
-    // Expo doesn't have a direct way to unregister, but we can clear local storage
-    // The token will be invalidated on the server side
-    await Notifications.dismissAllNotificationsAsync();
-  } catch (error) {
-    console.error('Error clearing FCM token:', error);
-  }
-};
+export type INotificationService = ReturnType<typeof createNotificationService>;
 
