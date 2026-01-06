@@ -17,6 +17,8 @@
     "api:seed:drivers": "cd apps/api && yarn seed:drivers",
     "web:dev": "nx serve web",
     "web:build": "nx build web",
+    "wakaweb:dev": "cd wakaweb && npm run dev",
+    "wakaweb:build": "cd wakaweb && npm run build",
     "ios": "export LANG=en_US.UTF-8 && expo run:ios"
   },
   "private": true,
