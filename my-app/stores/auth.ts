@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { IRootStore } from "./root";
 import { ILoggerService } from "@/services/logger";
 import { AuthService } from "@/services/auth";
-import { storageService } from "@/services/storage";
+import { AnalyticsService } from "@/services/analytics";
 
 const ONBOARDING_STORAGE_KEYS = {
   ONBOARDING_SEEN: 'onboardingSeen',
@@ -19,8 +19,9 @@ type Role = 'passenger' | 'driver';
 
 export const createAuthStore = (
     root: IRootStore,
-        logger: ILoggerService,
+    logger: ILoggerService,
     authService: AuthService,
+    analyticsService: AnalyticsService,
 ) => {
 
     const persist = async () => {

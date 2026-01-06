@@ -1,13 +1,15 @@
 import { autorun, makeAutoObservable, runInAction, toJS } from "mobx";
 import { Href, router, Router } from "expo-router";
 import { Share, ShareContent, ShareOptions } from "react-native";
-// import {toast} from "sonner-native";
 import { IRootStore } from "./root";
 import { ILoggerService } from "@/services/logger";
+import { AnalyticsService } from "@/services/analytics";
+import { storageService } from "@/services/storage";
 
 export const createGuiStore = (
     root: IRootStore,
     logger: ILoggerService,
+    analyticsService: AnalyticsService,
 ) => {
     const persist = async () => {
         try {

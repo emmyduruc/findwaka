@@ -17,6 +17,21 @@ const ChatListScreen = observer(() => {
     rootStore.chat.loadConversations();
   }, []);
 
+  useEffect(() => {
+    const requestNotificationPermission = async () => {
+      try {
+        const hasPermission = await rootStore.notificationService.requestUserPermission();
+        if (hasPermission) {
+          await rootStore.notificationService.registerDeviceForRemoteMessages();
+        }
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+      }
+    };
+
+    requestNotificationPermission();
+  }, []);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await rootStore.chat.loadConversations();

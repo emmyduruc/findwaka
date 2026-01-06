@@ -31,6 +31,21 @@ const ChatScreen = observer(() => {
   }, [conversationId]);
 
   useEffect(() => {
+    const requestNotificationPermission = async () => {
+      try {
+        const hasPermission = await rootStore.notificationService.requestUserPermission();
+        if (hasPermission) {
+          await rootStore.notificationService.registerDeviceForRemoteMessages();
+        }
+      } catch (error) {
+        console.error('Error requesting notification permission:', error);
+      }
+    };
+
+    requestNotificationPermission();
+  }, []);
+
+  useEffect(() => {
     if (rootStore.chat.currentConversation) {
       const giftedMessages: IMessage[] = rootStore.chat.currentConversation.messages.map((msg) => ({
         _id: msg.id,

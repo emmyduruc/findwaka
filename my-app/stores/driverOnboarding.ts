@@ -1,9 +1,16 @@
 import { makeAutoObservable } from 'mobx';
+import { IRootStore } from './root';
+import { ILoggerService } from '@/services/logger';
+import { AnalyticsService } from '@/services/analytics';
 
 export type VehicleType = 'bike' | 'tricycle' | 'car';
 export type VehicleColor = 'Black' | 'White' | 'Red' | 'Blue' | 'Silver' | 'Gray' | 'Green' | 'Yellow' | 'Brown' | 'Other';
 
-export const createDriverOnboardingStore = () => {
+export const createDriverOnboardingStore = (
+    root: IRootStore,
+    logger: ILoggerService,
+    analyticsService: AnalyticsService,
+) => {
   const store = makeAutoObservable({
     displayName: '',
     vehicleType: null as VehicleType | null,

@@ -8,6 +8,10 @@ import { UserRole, AuthStatus } from '@/models/user.model';
 import messaging from '@react-native-firebase/messaging';
 import axiosInstance from '@/utils/fetch';
 import { DBUtils } from '@/utils/db';
+import { IRootStore } from './root';
+import { ILoggerService } from '@/services/logger';
+import { INotificationService } from '@/services/notifications';
+import { AnalyticsService } from '@/services/analytics';
 
 const STORAGE_KEYS = {
   onboardingSeen: 'onboardingSeen',
@@ -18,60 +22,36 @@ const STORAGE_KEYS = {
   phoneNumber: 'phoneNumber',
 };
 
-export class AppStore {
-  onboardingSeen: boolean = false;
-  authStatus: AuthStatus = 'loggedOut';
-  role: UserRole = UserRole.PASSENGER;
-  driverOnboardingComplete: boolean = false;
-  userId: string | null = null;
-  phoneNumber: string | null = null;
-  isAuthLoading: boolean = false;
-  isHydrated: boolean = false;
-  private _confirmation: any = null;
-  private notificationService: any = null; // Will be set from root store
-  
-  get confirmation() {
-    return this._confirmation;
-  }
-  
-  set confirmation(value: any) {
-    this._confirmation = value;
-  }
+export const createAppStore = (
+  root: IRootStore,
+  logger: ILoggerService,
+  analyticsService: AnalyticsService,
+) => {
+  const authService = createAuthService();
+  let notificationService: INotificationService | null = null;
 
-  setNotificationService(service: any) {
-    this.notificationService = service;
-  }
-
-  private authService = createAuthService();
-
-  constructor() {
-    makeAutoObservable(this);
-    this.hydrate();
-    this.setupAuthStateListener();
-  }
-
-  private setupAuthStateListener() {
+  const setupAuthStateListener = () => {
     auth().onAuthStateChanged((user) => {
       if (user) {
-        if (this.authStatus === 'loggedIn') {
+        if (store.authStatus === 'loggedIn') {
           runInAction(() => {
-            this.userId = user.uid;
+            store.userId = user.uid;
           });
-        } else if (this.authStatus === 'loggedOut') {
+        } else if (store.authStatus === 'loggedOut') {
           runInAction(() => {
-            this.authStatus = 'loggedIn';
-            this.userId = user.uid;
+            store.authStatus = 'loggedIn';
+            store.userId = user.uid;
           });
-          this.setAuthStatus('loggedIn');
-          this.setUserId(user.uid);
+          store.setAuthStatus('loggedIn');
+          store.setUserId(user.uid);
         }
-      } else if (!user && this.authStatus === 'loggedIn') {
-        this.logout();
+      } else if (!user && store.authStatus === 'loggedIn') {
+        store.logout();
       }
     });
-  }
+  };
 
-  async hydrate() {
+  const hydrate = async () => {
     try {
       const onboardingSeen = await SecureStore.getItemAsync(STORAGE_KEYS.onboardingSeen);
       const authStatus = await SecureStore.getItemAsync(STORAGE_KEYS.authStatus);
@@ -83,275 +63,306 @@ export class AppStore {
       const phoneNumber = await SecureStore.getItemAsync(STORAGE_KEYS.phoneNumber);
 
       if (onboardingSeen !== null) {
-        this.onboardingSeen = onboardingSeen === 'true';
+        store.onboardingSeen = onboardingSeen === 'true';
       }
       if (role) {
         const normalizedRole = role.toUpperCase() as UserRole;
         if (Object.values(UserRole).includes(normalizedRole)) {
-          this.role = normalizedRole;
+          store.role = normalizedRole;
         }
       }
       if (driverOnboardingComplete !== null) {
-        this.driverOnboardingComplete = driverOnboardingComplete === 'true';
+        store.driverOnboardingComplete = driverOnboardingComplete === 'true';
       }
       if (userId) {
-        this.userId = userId;
+        store.userId = userId;
       }
       if (phoneNumber) {
-        this.phoneNumber = phoneNumber;
+        store.phoneNumber = phoneNumber;
       }
 
       const firebaseUser = auth().currentUser;
       if (firebaseUser) {
         runInAction(() => {
-          this.authStatus = 'loggedIn';
-          this.userId = firebaseUser.uid;
-          this.isHydrated = true;
+          store.authStatus = 'loggedIn';
+          store.userId = firebaseUser.uid;
+          store.isHydrated = true;
         });
-        await this.setAuthStatus('loggedIn');
-        await this.setUserId(firebaseUser.uid);
+        await store.setAuthStatus('loggedIn');
+        await store.setUserId(firebaseUser.uid);
       } else if (authStatus) {
         runInAction(() => {
-          this.authStatus = authStatus as AuthStatus;
-          this.isHydrated = true;
+          store.authStatus = authStatus as AuthStatus;
+          store.isHydrated = true;
         });
       } else {
         runInAction(() => {
-          this.isHydrated = true;
+          store.isHydrated = true;
         });
       }
     } catch (error) {
       console.error('Failed to hydrate app store:', error);
       runInAction(() => {
-        this.isHydrated = true;
+        store.isHydrated = true;
       });
     }
-  }
+  };
 
-  async setOnboardingSeen(value: boolean) {
-    this.onboardingSeen = value;
-    await SecureStore.setItemAsync(STORAGE_KEYS.onboardingSeen, value.toString());
-  }
+  const store = makeAutoObservable({
+    onboardingSeen: false,
+    authStatus: 'loggedOut' as AuthStatus,
+    role: UserRole.PASSENGER,
+    driverOnboardingComplete: false,
+    userId: null as string | null,
+    phoneNumber: null as string | null,
+    isAuthLoading: false,
+    isHydrated: false,
+    _confirmation: null as any,
 
-  async setAuthStatus(status: AuthStatus) {
-    this.authStatus = status;
-    await SecureStore.setItemAsync(STORAGE_KEYS.authStatus, status);
-  }
+    get confirmation() {
+      return store._confirmation;
+    },
 
-  async setRole(role: UserRole) {
-    this.role = role;
-    await SecureStore.setItemAsync(STORAGE_KEYS.role, role);
-  }
+    set confirmation(value: any) {
+      store._confirmation = value;
+    },
 
-  async setDriverOnboardingComplete(value: boolean) {
-    this.driverOnboardingComplete = value;
-    await SecureStore.setItemAsync(STORAGE_KEYS.driverOnboardingComplete, value.toString());
-  }
+    setNotificationService: (service: INotificationService) => {
+      notificationService = service;
+    },
 
-  async setUserId(userId: string | null) {
-    this.userId = userId;
-    if (userId) {
-      await SecureStore.setItemAsync(STORAGE_KEYS.userId, userId);
-    } else {
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.userId);
-    }
-  }
+    setOnboardingSeen: async (value: boolean) => {
+      store.onboardingSeen = value;
+      await SecureStore.setItemAsync(STORAGE_KEYS.onboardingSeen, value.toString());
+    },
 
-  async setPhoneNumber(phoneNumber: string | null) {
-    this.phoneNumber = phoneNumber;
-    if (phoneNumber) {
-      await SecureStore.setItemAsync(STORAGE_KEYS.phoneNumber, phoneNumber);
-    } else {
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.phoneNumber);
-    }
-  }
+    setAuthStatus: async (status: AuthStatus) => {
+      store.authStatus = status;
+      await SecureStore.setItemAsync(STORAGE_KEYS.authStatus, status);
+    },
 
-  async sendPhoneVerificationCode(phoneNumber: string): Promise<void> {
-    try {
-      this.isAuthLoading = true;
-      
-      const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
-      
-      await this.setPhoneNumber(phoneNumber);
-      
-      runInAction(() => {
-        this._confirmation = confirmation;
-        this.isAuthLoading = false;
-      });
-    } catch (error: any) {
-      console.error('Error sending verification code:', error);
-      this.isAuthLoading = false;
-      throw error;
-    }
-  }
+    setRole: async (role: UserRole) => {
+      store.role = role;
+      await SecureStore.setItemAsync(STORAGE_KEYS.role, role);
+    },
 
-  async verifyPhoneCode(code: string, role: UserRole): Promise<void> {
-    try {
-      if (!this.confirmation) {
-        throw new Error('No confirmation available. Please request a code first.');
+    setDriverOnboardingComplete: async (value: boolean) => {
+      store.driverOnboardingComplete = value;
+      await SecureStore.setItemAsync(STORAGE_KEYS.driverOnboardingComplete, value.toString());
+    },
+
+    setUserId: async (userId: string | null) => {
+      store.userId = userId;
+      if (userId) {
+        await SecureStore.setItemAsync(STORAGE_KEYS.userId, userId);
+      } else {
+        await SecureStore.deleteItemAsync(STORAGE_KEYS.userId);
       }
+    },
 
-      this.isAuthLoading = true;
-
-      const userCredential = await this.confirmation.confirm(code);
-      const user = userCredential.user;
-      
-      if (!user) {
-        throw new Error('Failed to authenticate user');
+    setPhoneNumber: async (phoneNumber: string | null) => {
+      store.phoneNumber = phoneNumber;
+      if (phoneNumber) {
+        await SecureStore.setItemAsync(STORAGE_KEYS.phoneNumber, phoneNumber);
+      } else {
+        await SecureStore.deleteItemAsync(STORAGE_KEYS.phoneNumber);
       }
+    },
 
-      const firebaseIdToken = await user.getIdToken(true);
-      await _setToken(firebaseIdToken);
-      
-      await this.authService.initializeUser(firebaseIdToken, role);
+    sendPhoneVerificationCode: async (phoneNumber: string): Promise<void> => {
+      try {
+        store.isAuthLoading = true;
 
-      runInAction(() => {
-        this.authStatus = 'loggedIn';
-        this.role = role;
-        this.userId = user.uid;
-        this.onboardingSeen = true;
-        this._confirmation = null;
-        if (role === UserRole.DRIVER) {
-          this.driverOnboardingComplete = false;
+        const confirmation = await auth().signInWithPhoneNumber(phoneNumber);
+
+        await store.setPhoneNumber(phoneNumber);
+
+        runInAction(() => {
+          store._confirmation = confirmation;
+          store.isAuthLoading = false;
+        });
+      } catch (error: any) {
+        console.error('Error sending verification code:', error);
+        store.isAuthLoading = false;
+        throw error;
+      }
+    },
+
+    verifyPhoneCode: async (code: string, role: UserRole): Promise<void> => {
+      try {
+        if (!store.confirmation) {
+          throw new Error('No confirmation available. Please request a code first.');
         }
+
+        store.isAuthLoading = true;
+
+        const userCredential = await store.confirmation.confirm(code);
+        const user = userCredential.user;
+
+        if (!user) {
+          throw new Error('Failed to authenticate user');
+        }
+
+        const firebaseIdToken = await user.getIdToken(true);
+        await _setToken(firebaseIdToken);
+
+        await authService.initializeUser(firebaseIdToken, role);
+
+        runInAction(() => {
+          store.authStatus = 'loggedIn';
+          store.role = role;
+          store.userId = user.uid;
+          store.onboardingSeen = true;
+          store._confirmation = null;
+          if (role === UserRole.DRIVER) {
+            store.driverOnboardingComplete = false;
+          }
+        });
+
+        await Promise.all([
+          store.setAuthStatus('loggedIn'),
+          store.setRole(role),
+          store.setOnboardingSeen(true),
+          store.setUserId(user.uid),
+        ]);
+
+        await store.updateFCMTokenIfNeeded();
+
+        try {
+        } catch (analyticsError) {
+          console.warn('Analytics logging failed:', analyticsError);
+        }
+
+        if (role === UserRole.DRIVER) {
+          router.replace('/(driver-onboarding)/step-1');
+        } else {
+          router.replace('/(tabs)/nearby');
+        }
+      } catch (error: any) {
+        console.error('Error verifying code:', error);
+        store.isAuthLoading = false;
+        throw error;
+      }
+    },
+
+    continueAsGuest: async () => {
+      await Promise.all([
+        store.setAuthStatus('guest'),
+        store.setRole(UserRole.PASSENGER),
+        store.setOnboardingSeen(true),
+      ]);
+      router.replace('/(tabs)/nearby');
+    },
+
+    mockPassengerLogin: async () => {
+      await Promise.all([
+        store.setAuthStatus('loggedIn'),
+        store.setRole(UserRole.PASSENGER),
+        store.setOnboardingSeen(true),
+      ]);
+      router.replace('/(tabs)/nearby');
+    },
+
+    mockDriverLogin: async () => {
+      await Promise.all([
+        store.setAuthStatus('loggedIn'),
+        store.setRole(UserRole.DRIVER),
+        store.setDriverOnboardingComplete(false),
+        store.setOnboardingSeen(true),
+      ]);
+      router.replace('/(driver-onboarding)/step-1');
+    },
+
+    logout: async () => {
+      try {
+        await store.clearFCMToken();
+      } catch (error) {
+        console.error('Error clearing FCM token on logout:', error);
+      }
+
+      try {
+        await auth().signOut();
+      } catch (error) {
+        console.error('Error signing out from Firebase:', error);
+      }
+
+      runInAction(() => {
+        store.authStatus = 'loggedOut';
+        store.role = UserRole.PASSENGER;
+        store.userId = null;
+        store._confirmation = null;
+        store.driverOnboardingComplete = false;
       });
 
       await Promise.all([
-        this.setAuthStatus('loggedIn'),
-        this.setRole(role),
-        this.setOnboardingSeen(true),
-        this.setUserId(user.uid),
+        store.setAuthStatus('loggedOut'),
+        SecureStore.deleteItemAsync(STORAGE_KEYS.role),
+        SecureStore.deleteItemAsync(STORAGE_KEYS.userId),
+        SecureStore.deleteItemAsync(STORAGE_KEYS.driverOnboardingComplete),
       ]);
 
-      await this.updateFCMTokenIfNeeded();
+      await _setToken('');
 
+      router.replace('/(onboarding)/welcome');
+    },
+
+    updateFCMToken: async (token?: string): Promise<void> => {
       try {
-      
-      } catch (analyticsError) {
-        console.warn('Analytics logging failed:', analyticsError);
-      }
-
-      if (role === UserRole.DRIVER) {
-        router.replace('/(driver-onboarding)/step-1');
-      } else {
-        router.replace('/(tabs)/nearby');
-      }
-    } catch (error: any) {
-      console.error('Error verifying code:', error);
-      this.isAuthLoading = false;
-      throw error;
-    }
-  }
-
-  async continueAsGuest() {
-    await Promise.all([
-      this.setAuthStatus('guest'),
-      this.setRole(UserRole.PASSENGER),
-      this.setOnboardingSeen(true),
-    ]);
-    router.replace('/(tabs)/nearby');
-  }
-
-  async mockPassengerLogin() {
-    await Promise.all([
-      this.setAuthStatus('loggedIn'),
-      this.setRole(UserRole.PASSENGER),
-      this.setOnboardingSeen(true),
-    ]);
-    router.replace('/(tabs)/nearby');
-  }
-
-  async mockDriverLogin() {
-    await Promise.all([
-      this.setAuthStatus('loggedIn'),
-      this.setRole(UserRole.DRIVER),
-      this.setDriverOnboardingComplete(false),
-      this.setOnboardingSeen(true),
-    ]);
-    router.replace('/(driver-onboarding)/step-1');
-  }
-
-  async logout() {
-    // Clear FCM token before logout
-    try {
-      await this.clearFCMToken();
-    } catch (error) {
-      console.error('Error clearing FCM token on logout:', error);
-    }
-
-    try {
-      await auth().signOut();
-    } catch (error) {
-      console.error('Error signing out from Firebase:', error);
-    }
-
-    runInAction(() => {
-      this.authStatus = 'loggedOut';
-      this.role = UserRole.PASSENGER;
-      this.userId = null;
-      this._confirmation = null;
-      this.driverOnboardingComplete = false;
-    });
-
-    await Promise.all([
-      this.setAuthStatus('loggedOut'),
-      SecureStore.deleteItemAsync(STORAGE_KEYS.role),
-      SecureStore.deleteItemAsync(STORAGE_KEYS.userId),
-      SecureStore.deleteItemAsync(STORAGE_KEYS.driverOnboardingComplete),
-    ]);
-
-    await _setToken('');
-
-    router.replace('/(onboarding)/welcome');
-  }
-
-  async updateFCMToken(token?: string): Promise<void> {
-    try {
-      const fcmToken = token || (this.notificationService ? await this.notificationService.getFcmToken() : null);
-      if (!fcmToken) {
-        console.warn('Failed to get FCM token');
-        return;
-      }
-
-      await axiosInstance.post(DBUtils.users.updateFCMToken, { token: fcmToken });
-      console.log('FCM token updated successfully');
-    } catch (error: any) {
-      console.error('Error updating FCM token:', error.response?.data || error.message);
-    }
-  }
-
-  async updateFCMTokenIfNeeded(): Promise<void> {
-    try {
-      const userResponse = await axiosInstance.get(DBUtils.users.getMe) as any;
-      if (userResponse?.pushNotificationToken) {
-        return;
-      }
-
-      await this.updateFCMToken();
-    } catch (error: any) {
-      console.error('Error updating FCM token:', error.response?.data || error.message);
-    }
-  }
-
-  async clearFCMToken(): Promise<void> {
-    try {
-      await axiosInstance.post(DBUtils.users.clearFCMToken);
-      if (this.notificationService) {
-
-        if (messaging().isDeviceRegisteredForRemoteMessages) {
-          await messaging().unregisterDeviceForRemoteMessages();
+        const fcmToken = token || (notificationService ? await notificationService.getFcmToken() : null);
+        if (!fcmToken) {
+          console.warn('Failed to get FCM token');
+          return;
         }
+
+        await axiosInstance.post(DBUtils.users.updateFCMToken, { token: fcmToken });
+        console.log('FCM token updated successfully');
+      } catch (error: any) {
+        console.error('Error updating FCM token:', error.response?.data || error.message);
       }
-      console.log('FCM token cleared successfully');
-    } catch (error: any) {
-      console.error('Error clearing FCM token:', error.response?.data || error.message);
-    }
-  }
+    },
 
-  async resetOnboarding() {
-    await SecureStore.deleteItemAsync(STORAGE_KEYS.onboardingSeen);
-    this.onboardingSeen = false;
-  }
-}
+    updateFCMTokenIfNeeded: async (): Promise<void> => {
+      try {
+        const userResponse = await axiosInstance.get(DBUtils.users.getMe) as any;
+        if (userResponse?.pushNotificationToken) {
+          return;
+        }
 
-export const appStore = new AppStore();
+        await store.updateFCMToken();
+      } catch (error: any) {
+        console.error('Error updating FCM token:', error.response?.data || error.message);
+      }
+    },
+
+    clearFCMToken: async (): Promise<void> => {
+      try {
+        await axiosInstance.post(DBUtils.users.clearFCMToken);
+        if (notificationService) {
+          if (messaging().isDeviceRegisteredForRemoteMessages) {
+            await messaging().unregisterDeviceForRemoteMessages();
+          }
+        }
+        console.log('FCM token cleared successfully');
+      } catch (error: any) {
+        console.error('Error clearing FCM token:', error.response?.data || error.message);
+      }
+    },
+
+    resetOnboarding: async () => {
+      await SecureStore.deleteItemAsync(STORAGE_KEYS.onboardingSeen);
+      store.onboardingSeen = false;
+    },
+  });
+
+  setupAuthStateListener();
+  hydrate();
+
+  logger?.log(
+    "App store initialized",
+    logger.templateMessages.SERVICE
+  );
+
+  return store;
+};
+
+export type IAppStore = ReturnType<typeof createAppStore>;

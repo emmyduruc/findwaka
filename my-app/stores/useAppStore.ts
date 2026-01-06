@@ -1,15 +1,8 @@
 import { createContext, useContext } from 'react';
-import { AppStore } from './appStore';
-import { appStore } from './appStore';
+import { useStorage } from './root';
+import { IAppStore } from './appStore';
 
-export const AppStoreContext = createContext<AppStore>(appStore);
-
-export const useAppStore = () => {
-  const store = useContext(AppStoreContext);
-  if (!store) {
-    throw new Error('useAppStore must be used within AppStoreProvider');
-  }
-  return store;
+export const useAppStore = (): IAppStore => {
+  const rootStore = useStorage();
+  return rootStore.app;
 };
-
-export { appStore };

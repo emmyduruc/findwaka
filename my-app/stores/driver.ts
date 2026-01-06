@@ -2,6 +2,7 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import { createDriverService, PublicDriver, GetPublicDriversParams } from '@/services/driver';
 import { IRootStore } from './root';
 import { ILoggerService } from '@/services/logger';
+import { AnalyticsService } from '@/services/analytics';
 import { VehicleType } from '@waka/shared';
 
 export type VehicleFilter = 'all' | 'bike' | 'tricycle' | 'car';
@@ -54,6 +55,7 @@ const vehicleTypeToLabel = (vehicleType: VehicleType): string => {
 export const createDriverStore = (
     root: IRootStore,
     logger: ILoggerService,
+    analyticsService: AnalyticsService,
 ) => {
     const driverService = createDriverService();
 

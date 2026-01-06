@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import * as React from 'react';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -13,10 +14,17 @@ import {
 import 'react-native-reanimated';
 import '../global.css';
 
-import { AppStoreContext, appStore } from '@/stores/useAppStore';
+import { StoreProvider, parentStore } from '@/stores/root';
 
-// Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
+
+function AppContent({ children }: { children: React.ReactNode }) {
+  return (
+    <StoreProvider value={parentStore}>
+      {children}
+    </StoreProvider>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -51,7 +59,7 @@ export default function RootLayout() {
   };
 
   return (
-    <AppStoreContext.Provider value={appStore}>
+    <AppContent>
       <ThemeProvider value={darkTheme}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
@@ -63,6 +71,6 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style="light" />
       </ThemeProvider>
-    </AppStoreContext.Provider>
+    </AppContent>
   );
 }
