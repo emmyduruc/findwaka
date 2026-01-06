@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { observer } from 'mobx-react-lite';
 import { useStorage } from '@/stores/root';
+import { UserRole } from '@/models/user.model';
 import { Text } from '@/ui/Text';
 import { Avatar } from '@/ui/Avatar';
 import { Icon } from '@/ui/Icon';
@@ -12,6 +13,7 @@ import { colors } from '@/theme/colors';
 const ChatListScreen = observer(() => {
   const rootStore = useStorage();
   const [refreshing, setRefreshing] = useState(false);
+  const isDriver = rootStore.app.role === UserRole.DRIVER;
 
   useEffect(() => {
     rootStore.chat.loadConversations();
@@ -64,7 +66,9 @@ const ChatListScreen = observer(() => {
             No conversations yet
           </Text>
           <Text variant="body" style={{ color: colors.textMuted, textAlign: 'center' }}>
-            Start a conversation by messaging a driver from their profile
+            {isDriver
+              ? 'When passengers find you, their messages will appear here'
+              : 'Start a conversation by messaging a driver from their profile'}
           </Text>
         </View>
       </SafeAreaView>
