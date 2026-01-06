@@ -47,6 +47,9 @@ export class PublicDriverResponseDto {
   id: string;
 
   @ApiProperty()
+  userId: string;
+
+  @ApiProperty()
   displayName: string;
 
   @ApiProperty({ required: false })

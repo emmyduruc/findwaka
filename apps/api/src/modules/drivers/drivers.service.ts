@@ -183,6 +183,7 @@ export class DriversService {
         'driver.communityHome',
         'driver.averageRating',
         'driver.ratingCount',
+        'user.id',
         'user.displayName',
         'user.photoUrl',
         'presence.isOnline',
@@ -198,6 +199,7 @@ export class DriversService {
 
     const drivers: PublicDriverResponseDto[] = results.map((driver) => ({
       id: driver.id,
+      userId: driver.user.id,
       displayName: driver.user.displayName,
       photoUrl: driver.user.photoUrl,
       vehicleType: driver.vehicleType,
