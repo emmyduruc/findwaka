@@ -71,7 +71,14 @@ axiosInstance.interceptors.response.use(
     async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        const status = error.response?.status;
+        const message = (error.response?.data as any)?.message as string | undefined;
+        const isExpiredToken =
+            typeof message === "string" &&
+            message.toLowerCase().includes("id-token-expired");
+
+        // Only try to refresh when Firebase says the ID token is expired
+        if (status === 401 && isExpiredToken && !originalRequest._retry) {
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -91,45 +98,48 @@ axiosInstance.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                // const firebaseUser = auth.currentUser;
-                // if (!firebaseUser) {
-                //     router.replace("/(auth)/(onboarding)/phone-register" as any);
-                //     throw new Error("No authenticated user");
-                // }
+                const firebaseUser = auth().currentUser;
 
-                // const freshFirebaseToken = await firebaseUser.getIdToken(true);
-                
-                // const refreshResponse = await axios.post(
-                //     DBUtils.loginUser,
-                //     undefined,
-                //     {
-                //         headers: {
-                //             "firebase-id-token": freshFirebaseToken,
-                //         },
-                //     }
-                // );
+                // If Firebase no longer has a user, force logout by clearing token and signing out
+                if (!firebaseUser) {
+                    await _setToken("");
+                    try {
+                        await auth().signOut();
+                    } catch {
+                        // ignore
+                    }
+                    processQueue(new Error("No authenticated Firebase user"), null);
+                    isRefreshing = false;
+                    return Promise.reject(error);
+                }
 
-                // const newServerToken = refreshResponse.data?.data?.token || refreshResponse.data?.token;
-                
-                // if (newServerToken) {
-                //     await _setToken(newServerToken);
-                    
-                //     if (originalRequest.headers) {
-                //         originalRequest.headers.Authorization = `Bearer ${newServerToken}`;
-                //     }
+                // Force Firebase to issue a fresh ID token
+                const freshFirebaseToken = await firebaseUser.getIdToken(true);
 
-                //     processQueue(null, newServerToken);
-                //     isRefreshing = false;
-                    
-                //     return axiosInstance(originalRequest);
-                // } else {
-                //     throw new Error("Failed to get new server token");
-                // }
+                if (!freshFirebaseToken) {
+                    throw new Error("Failed to get fresh Firebase ID token");
+                }
+
+                await _setToken(freshFirebaseToken);
+
+                if (originalRequest.headers) {
+                    originalRequest.headers.Authorization = `Bearer ${freshFirebaseToken}`;
+                }
+
+                processQueue(null, freshFirebaseToken);
+                isRefreshing = false;
+
+                return axiosInstance(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError, null);
                 isRefreshing = false;
                 
                 await _setToken("");
+                try {
+                    await auth().signOut();
+                } catch {
+                    // ignore
+                }
                 
                 return Promise.reject(refreshError);
             }
