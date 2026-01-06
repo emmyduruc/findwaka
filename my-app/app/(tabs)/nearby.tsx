@@ -235,9 +235,36 @@ const NearbyScreen = observer(() => {
                   <Card>
                     <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
                       <View style={{ flex: 1, minWidth: 0 }}>
+                        <View className='flex-row justify-between items-center gap-2'>
+                          <View className='flex-row items-center gap-2'>
                         <Text variant="h3" weight="600" style={{ marginBottom: 4 }} numberOfLines={1}>
                           {driver.name}
+                         
                         </Text>
+                        {driver.isOnline && (
+                          <View
+                            style={{
+                            
+                              width: 14,
+                              height: 14,
+                              borderRadius: 7,
+                              backgroundColor: '#10B981',
+                              borderWidth: 2.5,
+                              borderColor: colors.surface,
+                            }}
+                          />
+                        )}
+                        
+                        </View>
+<View className='rounded-full overflow-hidden bg-white border border-border absolute top-0 right-0'>
+                         <Image
+                            source={getVehicleImage()}
+                            style={{ width: 58, height: 58 }}
+                            contentFit="cover"
+                          />
+                      </View>
+                        </View>
+                         
                         <Text variant="caption" color="muted" style={{ marginBottom: 8 }}>
                           {driver.vehicle}
                         </Text>
@@ -256,22 +283,14 @@ const NearbyScreen = observer(() => {
                           </View>
                         </View>
 
-                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                        <View className='flex-row items-center justify-between w-full gap-4'>
                           <TouchableOpacity
                             onPress={(e) => {
                               e.stopPropagation();
                               handleCall(driver.id);
                             }}
-                            style={{
-                              flex: 1,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              backgroundColor: colors.accentPrimary,
-                              paddingVertical: 11,
-                              borderRadius: 10,
-                              gap: 6,
-                            }}
+                           
+                            className='flex-1 flex-row items-center justify-center bg-accentPrimary p-2.5 rounded-lg gap-2'
                             activeOpacity={0.8}
                           >
                             <Icon name="call" size={16} color={colors.background} />
@@ -284,18 +303,7 @@ const NearbyScreen = observer(() => {
                               e.stopPropagation();
                               handleWhatsApp(driver.id);
                             }}
-                            style={{
-                              flex: 1,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              backgroundColor: colors.surface,
-                              borderWidth: 1.5,
-                              borderColor: colors.border,
-                              paddingVertical: 11,
-                              borderRadius: 10,
-                              gap: 6,
-                            }}
+                            className='flex-1 flex-row items-center justify-center bg-surface border border-border p-2.5 rounded-lg gap-2'
                             activeOpacity={0.8}
                           >
                             <Icon name="logo-whatsapp" size={16} color={colors.accentPrimary} />
@@ -306,49 +314,7 @@ const NearbyScreen = observer(() => {
                         </View>
                       </View>
 
-                      <View className='rounded-full overflow-hidden bg-white border border-border'>
-                         <Image
-                            source={getVehicleImage()}
-                            style={{ width: 58, height: 58 }}
-                            contentFit="cover"
-                          />
-                        {driver.isOnline && (
-                          <View
-                            style={{
-                              position: 'absolute',
-                              top: 0,
-                              right: 0,
-                              width: 14,
-                              height: 14,
-                              borderRadius: 7,
-                              backgroundColor: '#10B981',
-                              borderWidth: 2.5,
-                              borderColor: colors.surface,
-                            }}
-                          />
-                        )}
-                        {/* <View
-                          style={{
-                            position: 'absolute',
-                            bottom: -2,
-                            right: -2,
-                            width: 32,
-                            height: 32,
-                            borderRadius: 8,
-                            backgroundColor: colors.background,
-                            borderWidth: 2,
-                            borderColor: colors.surface,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <Image
-                            source={getVehicleImage()}
-                            style={{ width: 24, height: 24 }}
-                            contentFit="contain"
-                          />
-                        </View> */}
-                      </View>
+                     
                     </View>
                   </Card>
                 </TouchableOpacity>
@@ -358,7 +324,6 @@ const NearbyScreen = observer(() => {
         )}
       </ScrollView>
 
-      {/* Driver Detail Sheet */}
       <DriverDetailSheet
         visible={sheetVisible}
         onClose={handleCloseSheet}
